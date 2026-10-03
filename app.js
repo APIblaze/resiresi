@@ -66,7 +66,7 @@ function widgets() {
   });
   if (env('APIBLAZE_CP_KEY') && env('APIBLAZE_WIDGETS') === '1') {
     const user = () => ({ tenant, userId: ME.userId, email: ME.email, label: ME.label });
-    out.keys = lib.createApiblazeKeys({ cpKey: env('APIBLAZE_CP_KEY'), getUser: user });
+    out.keys = lib.createApiblazeKeys({ cpKey: env('APIBLAZE_CP_KEY'), getUser: user, environment: 'dev' });
     out.groups = lib.createApiblazeGroups({ cpKey: env('APIBLAZE_CP_KEY'), getUser: user });
   }
   return out;

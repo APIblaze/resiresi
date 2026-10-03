@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: ResiResi API
+  version: 1.0.0
+  description: Table bookings for a pizzeria. This file is all APIblaze reads to decide who may do what.
+paths:
+  /reservations:
+    get:
+      operationId: listReservations
+      summary: List my bookings
+      responses:
+        '200':
+          description: The caller's bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Reservation' }
+    post:
+      operationId: createReservation
+      summary: Book a table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewReservation' }
+      responses:
+        '201':
+          description: Booked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reservation' }
+  /reservations/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getReservation
+      summary: Get one booking
+      responses:
+        '200':
+          description: The booking
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reservation' }
+    delete:
+      operationId: cancelReservation
+      summary: Cancel a booking
+      responses:
+        '204': { description: Cancelled }
+components:
+  schemas:
+    NewReservation:
+      type: object
+      required: [name, table, time]
+      properties:
+        name: { type: string, example: Ana }
+        table: { type: integer, example: 4 }
+        time: { type: string, example: '19:30' }
+    Reservation:
+      allOf:
+        - $ref: '#/components/schemas/NewReservation'
+        - type: object
+          properties:
+            id: { type: string, example: r1 }

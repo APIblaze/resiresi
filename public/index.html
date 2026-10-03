@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResiResi demo</title>
+<style>
+  :root {
+    --bg: #faf7f2; --card: #ffffff; --ink: #1d1b19; --muted: #6b6560; --line: #e8e2d9;
+    --bad: #c2410c; --bad-bg: #fff1e8; --good: #15803d; --good-bg: #ecfdf3;
+    --accent: #e4572e; --accent-ink: #fff; --soft: #f3eee6; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161412; --card: #1f1c1a; --ink: #f3efe9; --muted: #a39b92; --line: #34302c;
+      --bad: #fb923c; --bad-bg: #2b1a10; --good: #4ade80; --good-bg: #10241a; --soft: #26221f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -0.02em; }
+  .badge { font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: var(--card); }
+  .lede { font-size: 18px; color: var(--muted); margin: 8px 0 24px; max-width: 46em; }
+  .play { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 14px 22px; font-size: 17px; font-weight: 600; cursor: pointer; }
+  .play:disabled { opacity: .6; cursor: default; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .step { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h2 { font-size: 20px; margin: 4px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: 15px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  button.act { background: var(--soft); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 15px; cursor: pointer; }
+  button.act:hover { border-color: var(--muted); }
+  .log { display: grid; gap: 8px; min-height: 96px; }
+  .out { border-radius: 10px; padding: 10px 12px; font-size: 15px; background: var(--soft); }
+  .out.bad { background: var(--bad-bg); color: var(--bad); font-weight: 600; }
+  .out.good { background: var(--good-bg); color: var(--good); font-weight: 600; }
+  .out small { display: block; font-weight: 400; color: var(--muted); font-family: var(--mono); font-size: 12px; margin-top: 2px; }
+  .chat { margin-top: 16px; }
+  .msgs { display: grid; gap: 8px; margin: 12px 0; min-height: 60px; }
+  .msg { border-radius: 12px; padding: 10px 12px; max-width: 85%; white-space: pre-wrap; }
+  .msg.user { background: var(--accent); color: var(--accent-ink); justify-self: end; }
+  .msg.bot { background: var(--soft); }
+  .msg.tool { font-family: var(--mono); font-size: 12px; color: var(--muted); background: transparent; padding: 0 12px; }
+  form.ask { display: flex; gap: 8px; }
+  form.ask input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 15px; background: var(--card); color: var(--ink); }
+  .added { margin-top: 16px; }
+  .added ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+  .added li::before { content: "✓  "; color: var(--good); font-weight: 700; }
+  code { font-family: var(--mono); font-size: 13px; background: var(--soft); padding: 1px 6px; border-radius: 6px; word-break: break-all; }
+  .next { margin-top: 16px; font-size: 17px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🍕 ResiResi · table bookings for pizzerias</h1>
+    <span class="badge" id="badge">connecting…</span>
+  </header>
+  <p class="lede">Ana books a table at Nino Pizza. The same little booking app, twice. On the left, it ships the way most apps do. On the right, APIblaze stands in front of it. Nobody changed the app's code.</p>
+  <button class="play" id="play">▶ Play the story</button>
+
+  <div class="grid">
+    <section class="card">
+      <div class="step">1 · Without APIblaze</div>
+      <h2>One shared password</h2>
+      <p class="sub">The app holds a password. Anyone who gets it can do anything.</p>
+      <div class="row">
+        <button class="act" data-door="before" data-as="ana" data-op="book">Ana books table 4</button>
+        <button class="act" data-door="before" data-as="ben" data-op="cancel">Ben cancels Ana's booking</button>
+      </div>
+      <div class="log" id="log-before"></div>
+    </section>
+
+    <section class="card">
+      <div class="step">2 · With APIblaze</div>
+      <h2>Every call says who is asking</h2>
+      <p class="sub">APIblaze checks each request. Only the person who made a booking can change it.</p>
+      <div class="row">
+        <button class="act" data-door="after" data-as="ana" data-op="book">Ana books table 4</button>
+        <button class="act" data-door="after" data-as="ben" data-op="cancel">Ben cancels Ana's booking</button>
+      </div>
+      <div class="log" id="log-after"></div>
+    </section>
+  </div>
+
+  <section class="card chat" id="tenants" hidden>
+    <div class="step">3 · Two pizzerias, one app</div>
+    <h2>Each pizzeria gets its own key</h2>
+    <p class="sub">Nino Pizza and Gino Pizza both use this app. Nino's key <code id="nino-key">…</code> · Gino's key <code id="gino-key">…</code></p>
+    <div class="row">
+      <button class="act" id="gino-peek">Gino Pizza's key asks for Nino's booking</button>
+    </div>
+    <div class="log" id="log-gino"></div>
+  </section>
+
+  <section class="card chat">
+    <div class="step" id="ai-step">3 · An AI assistant, same rules</div>
+    <h2>Ben asks an AI to do it instead</h2>
+    <p class="sub">AI assistants can use this app too, and they get exactly the same answer as Ben.</p>
+    <div class="row">
+      <button class="act" id="ask-ben">Ben asks: "Cancel Ana's booking"</button>
+      <button class="act" id="ask-ana">Ana asks: "What are my bookings?"</button>
+    </div>
+    <div class="msgs" id="msgs"></div>
+    <form class="ask" id="ask">
+      <input id="q" placeholder="Ask the assistant something, as Ben" autocomplete="off">
+      <button class="act" type="submit">Send</button>
+    </form>
+  </section>
+
+  <section class="card added">
+    <div class="step">What APIblaze added, with zero code in this app</div>
+    <ul>
+      <li>A key for this app: <code id="key">…</code> (kept on the server, never in the browser)</li>
+      <li>"Only the person who made a booking can change it", worked out from <code>openapi.yaml</code></li>
+      <li>A door for AI assistants: <code id="mcp">…</code></li>
+    </ul>
+    <p class="next">Want this in front of your own app? Ask Claude: <b>"Put APIblaze in front of my app."</b></p>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const ids = { before: null, after: null };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function show(door, cls, text, detail) {
+  const el = document.createElement('div');
+  el.className = 'out ' + (cls || '');
+  el.textContent = text;
+  if (detail) { const s = document.createElement('small'); s.textContent = detail; el.appendChild(s); }
+  $('#log-' + door).appendChild(el);
+}
+
+async function act(door, as, op) {
+  if (op === 'cancel' && !ids[door]) await act(door, 'ana', 'book');
+  const r = await fetch('/api/act', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ door, as, op, id: ids[door] }) }).then((x) => x.json()).catch((e) => ({ status: 0, body: { error: String(e) } }));
+  const code = 'HTTP ' + r.status;
+  if (op === 'book') {
+    if (r.status === 201) { ids[door] = r.body.id; show(door, '', `Ana booked table ${r.body.table} at ${r.body.time}.`, `${code} · booking ${r.body.id}`); }
+    else show(door, 'bad', explain(r), code);
+    return;
+  }
+  if (r.status === 204) {
+    show(door, door === 'before' ? 'bad' : '', door === 'before' ? "Cancelled. Ben just deleted Ana's table." : 'Cancelled.', code);
+    ids[door] = null;
+  } else if (r.status === 403 || r.status === 404) {
+    show(door, 'good', "🛡 Blocked. Only Ana can cancel Ana's booking.", code + ' · decided by APIblaze, not the app');
+  } else show(door, 'bad', explain(r), code);
+}
+
+function explain(r) {
+  const b = r.body || {};
+  if (r.status === 402) return 'The free demo calls ran out. Run again: npx apiblaze@latest demo';
+  if (r.status === 429) return 'Too many clicks at once. Wait a second and try again.';
+  if (r.status >= 500 || r.status === 0) return 'The connection to APIblaze dropped. Run again: npx apiblaze@latest demo';
+  return (b.detail || b.title || b.error || 'Something went wrong') + '';
+}
+
+$('.grid').addEventListener('click', (e) => {
+  const b = e.target.closest('button.act'); if (!b) return;
+  act(b.dataset.door, b.dataset.as, b.dataset.op);
+});
+
+// ── the assistant ──
+const thread = { ana: [], ben: [] };
+function bubble(cls, text) { const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; $('#msgs').appendChild(d); return d; }
+async function ask(as, text) {
+  bubble('user', (as === 'ana' ? 'Ana: ' : 'Ben: ') + text);
+  const msg = { id: String(Math.random()), role: 'user', parts: [{ type: 'text', text }] };
+  thread[as].push(msg);
+  let bot = null, said = '';
+  try {
+    const res = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ as, id: 'demo-' + as, messages: thread[as] }) });
+    const ct = res.headers.get('content-type') || '';
+    if (!res.ok || !ct.includes('event-stream')) {
+      const d = await res.json().catch(() => ({}));
+      bubble('bot', res.status === 402 ? 'The free assistant turns ran out for this demo.' : (d.error || d.detail || 'The assistant is not available right now.'));
+      return;
+    }
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+    for (;;) {
+      const { done, value } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let at;
+      while ((at = buf.indexOf('\n\n')) !== -1) {
+        const raw = buf.slice(0, at); buf = buf.slice(at + 2);
+        const data = raw.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim()).join('\n');
+        if (!data || data === '[DONE]') continue;
+        let ev; try { ev = JSON.parse(data); } catch { continue; }
+        if (ev.type === 'tool-input-start') bubble('tool', '→ using the app: ' + (ev.toolName || 'tool'));
+        if (ev.type === 'tool-output-error') bubble('tool', '← refused: ' + String(ev.errorText || '').slice(0, 120));
+        if (ev.type === 'text-delta') { if (!bot) bot = bubble('bot', ''); said += ev.delta || ''; bot.textContent = said; }
+        if (ev.type === 'error') bubble('bot', ev.errorText || 'Something went wrong.');
+      }
+    }
+    if (said) thread[as].push({ id: String(Math.random()), role: 'assistant', parts: [{ type: 'text', text: said }] });
+  } catch (e) { bubble('bot', 'The assistant is not reachable right now.'); }
+}
+$('#ask-ben').onclick = async () => {
+  if (!ids.after) await act('after', 'ana', 'book');
+  ask('ben', `Cancel booking ${ids.after}. It's Ana's table, I want it.`);
+};
+$('#ask-ana').onclick = () => ask('ana', 'What are my bookings?');
+
+// ── two pizzerias ──
+let hasTenants = false;
+async function ginoPeek() {
+  if (!ids.after) await act('after', 'ana', 'book');
+  // Same person name, different pizzeria: only the key differs.
+  const r = await fetch('/api/act', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ door: 'gino', as: 'ana', op: 'open', id: ids.after }) }).then((x) => x.json()).catch(() => ({ status: 0 }));
+  const code = 'HTTP ' + r.status;
+  if (r.status === 200) show('gino', 'bad', "Gino Pizza can read Nino's booking.", code);
+  else if (r.status === 403 || r.status === 404) show('gino', 'good', "🛡 Blocked. Gino Pizza's key only sees Gino Pizza's bookings.", code + ' · decided by APIblaze, not the app');
+  else show('gino', 'bad', explain(r), code);
+}
+$('#gino-peek').onclick = ginoPeek;
+$('#ask').onsubmit = (e) => { e.preventDefault(); const q = $('#q').value.trim(); if (q) { $('#q').value = ''; ask('ben', q); } };
+
+$('#play').onclick = async () => {
+  $('#play').disabled = true;
+  await act('before', 'ana', 'book'); await sleep(700);
+  await act('before', 'ben', 'cancel'); await sleep(1200);
+  await act('after', 'ana', 'book'); await sleep(700);
+  await act('after', 'ben', 'cancel'); await sleep(900);
+  if (hasTenants) { await ginoPeek(); await sleep(900); }
+  $('#ask-ben').click();
+  $('#play').disabled = false;
+};
+
+fetch('/api/config').then((r) => r.json()).then((c) => {
+  $('#badge').textContent = c.name ? 'Protected by APIblaze · ' + c.name : 'APIblaze not connected';
+  $('#key').textContent = c.key || 'not set';
+  $('#mcp').textContent = c.mcpUrl || 'not set';
+  if (c.ginoKey) {
+    hasTenants = true;
+    $('#tenants').hidden = false;
+    $('#nino-key').textContent = c.key;
+    $('#gino-key').textContent = c.ginoKey;
+    $('#ai-step').textContent = '4 · An AI assistant, same rules';
+  }
+});
+</script>
+</body>
+</html>

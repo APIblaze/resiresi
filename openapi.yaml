@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: ResiResi API
+  title: Nino's Pizza API
   version: 1.0.0
-  description: Table bookings for a pizzeria. This file is all APIblaze reads to decide who may do what.
+  description: Table bookings at Nino's Pizza. APIblaze reads this file to build the MCP tools for AI assistants and to work out who may change what.
 paths:
   /reservations:
     get:
@@ -55,7 +55,8 @@ components:
       properties:
         name: { type: string, example: Ana }
         table: { type: integer, example: 4 }
-        time: { type: string, example: '19:30' }
+        time: { type: string, example: '19:30', description: 'Time of the booking, 24h HH:MM' }
+        guests: { type: integer, example: 2, description: 'How many people' }
     Reservation:
       allOf:
         - $ref: '#/components/schemas/NewReservation'

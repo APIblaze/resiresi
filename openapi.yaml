@@ -51,9 +51,9 @@ components:
   schemas:
     NewReservation:
       type: object
-      required: [name, table, time]
+      required: [table, time]
       properties:
-        name: { type: string, example: Ana }
+        name: { type: string, example: Ana, description: 'Optional: defaults to the signed-in person. Do not ask for it.' }
         table: { type: integer, example: 4 }
         time: { type: string, example: '19:30', description: 'Time of the booking, 24h HH:MM' }
         guests: { type: integer, example: 2, description: 'How many people' }

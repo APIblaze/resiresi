@@ -1,9 +1,16 @@
 // Nino's Pizza website server: serves the page and makes its calls.
 //
-// Every call goes through APIblaze with ONE server key (kept here, never in the
-// browser) and says who is acting with X-End-User-Id. The chat and the two
-// widgets use apiblaze's own server helpers (lib/apiblaze-server.js, copied in by
-// `npx apiblaze@latest demo` — the same code as `import … from 'apiblaze/server'`).
+// PROTECTED (the default): every call goes to the PUBLIC API — through APIblaze — with the
+// pizzeria's server key (kept here, never in the browser) and X-End-User-Id naming the
+// person. APIblaze checks the key, applies the rules and forwards to the backend.
+//
+// DIRECT (the page's "unprotected" switch): the same calls go straight to the backend on
+// localhost, with the shared backend secret and whatever user the page claims. No APIblaze:
+// nobody checks who may do what. That is how most apps ship.
+//
+// The chat and the two admin widgets use apiblaze's own server helpers
+// (lib/apiblaze-server.js, copied in by `npx apiblaze@latest demo` — the same code as
+// `import … from 'apiblaze/server'`).
 
 const http = require('http');
 const fs = require('fs');
@@ -11,35 +18,36 @@ const path = require('path');
 
 const env = (name, fallback = '') => process.env[name] || fallback;
 const json = (res, status, body) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
-const mask = (k) => (k ? `${k.slice(0, 7)}••••${k.slice(-4)}` : '');
 
 let lib = null;
 try { lib = require('./lib/apiblaze-server.js'); } catch { /* run without the widgets */ }
 
-// Who is using the page. A real app takes this from its own login; the demo lets you switch.
-//   App tab:   ana, ben  — customers of Nino Pizza
-//   Admin tab: ana       — admin of Nino Pizza;  gina — admin of Gino Pizza
-const PEOPLE = {
-  ana: { userId: 'ana', label: 'Ana', email: 'ana@ninopizza.example', tenant: () => env('APIBLAZE_TENANT') },
-  ben: { userId: 'ben', label: 'Ben', email: 'ben@ninopizza.example', tenant: () => env('APIBLAZE_TENANT') },
-  gina: { userId: 'gina', label: 'Gina', email: 'gina@ginopizza.example', tenant: () => env('APIBLAZE_GINO_TENANT') },
+// The two pizzerias (tenants) and the people the demo lets you be. A real app takes
+// "who is this" from its own login.
+const PIZZERIAS = {
+  nino: { label: 'Nino Pizza', tenant: () => env('APIBLAZE_TENANT'), key: () => env('APIBLAZE_SERVER_KEY'), admin: { userId: 'ana', label: 'Ana', email: 'ana@ninopizza.example' } },
+  gino: { label: 'Gino Pizza', tenant: () => env('APIBLAZE_GINO_TENANT'), key: () => env('APIBLAZE_GINO_KEY'), admin: { userId: 'gina', label: 'Gina', email: 'gina@ginopizza.example' } },
 };
-function personOf(req) {
-  const as = new URL(req.url, 'http://x').searchParams.get('as') || 'ana';
-  return PEOPLE[as] || PEOPLE.ana;
-}
+const CUSTOMERS = { ana: 'Ana', ben: 'Ben' };
+const pizzeriaOf = (id) => PIZZERIAS[id] || PIZZERIAS.nino;
+function queryOf(req) { return new URL(req.url, 'http://x').searchParams; }
 
-async function call(op, { as = 'ana', id, key = 'nino', body } = {}) {
-  const base = env('APIBLAZE_URL').replace(/\/$/, '');
-  const headers = {
-    'content-type': 'application/json',
-    'x-api-key': key === 'gino' ? env('APIBLAZE_GINO_KEY') : env('APIBLAZE_SERVER_KEY'),
-    'x-end-user-id': as,
-  };
-  const req = op === 'book' ? { method: 'POST', url: `${base}/reservations`, body: JSON.stringify(body || { name: (PEOPLE[as] || PEOPLE.ana).label, table: 4, time: '19:30', guests: 2 }) }
+async function call(op, { pizzeria = 'nino', as = 'ana', id, body, direct = false } = {}) {
+  const pz = pizzeriaOf(pizzeria);
+  const base = direct ? `http://127.0.0.1:${env('BACKEND_PORT', '3001')}` : env('APIBLAZE_URL').replace(/\/$/, '');
+  const headers = { 'content-type': 'application/json' };
+  if (direct) {
+    // Straight to localhost: the backend trusts whatever these headers say.
+    headers['x-target-api-key'] = env('BACKEND_SECRET');
+    headers['x-abz-user-id'] = as;
+    headers['x-abz-tenant-id'] = pz.tenant();
+  } else {
+    headers['x-api-key'] = pz.key();
+    headers['x-end-user-id'] = as;
+  }
+  const req = op === 'book' ? { method: 'POST', url: `${base}/reservations`, body: JSON.stringify({ name: CUSTOMERS[as] || as, ...(body || {}) }) }
     : op === 'cancel' ? { method: 'DELETE', url: `${base}/reservations/${encodeURIComponent(id || '')}` }
-      : op === 'open' ? { method: 'GET', url: `${base}/reservations/${encodeURIComponent(id || '')}` }
-        : { method: 'GET', url: `${base}/reservations` };
+      : { method: 'GET', url: `${base}/reservations` };
   const r = await fetch(req.url, { method: req.method, headers, body: req.body });
   const text = await r.text();
   let data = null;
@@ -66,15 +74,20 @@ async function viaHandler(handler, req, res, raw) {
 
 function widgets() {
   if (!lib) return {};
-  const out = {};
-  out.chat = lib.createApiblazeChat({
-    project: `${env('APIBLAZE_NAME')}-${env('APIBLAZE_TENANT')}`, apiKey: env('APIBLAZE_SERVER_KEY'),
-    host: 'tryabz.run', environment: 'dev', getUser: (req) => ({ userId: personOf(req).userId }),
-  });
+  const out = { chat: {} };
+  for (const [id, pz] of Object.entries(PIZZERIAS)) {
+    if (!pz.tenant() || !pz.key()) continue;
+    // The assistant acts as the signed-in customer, at that customer's pizzeria.
+    out.chat[id] = lib.createApiblazeChat({
+      project: `${env('APIBLAZE_NAME')}-${pz.tenant()}`, apiKey: pz.key(),
+      host: 'tryabz.run', environment: 'dev', getUser: (req) => ({ userId: queryOf(req).get('as') || 'ana' }),
+    });
+  }
   if (env('APIBLAZE_CP_KEY') && env('APIBLAZE_WIDGETS') === '1') {
-    const user = (req) => { const p = personOf(req); return { tenant: p.tenant(), userId: p.userId, email: p.email, label: p.label }; };
-    out.keys = lib.createApiblazeKeys({ cpKey: env('APIBLAZE_CP_KEY'), getUser: user, environment: 'dev' });
-    out.groups = lib.createApiblazeGroups({ cpKey: env('APIBLAZE_CP_KEY'), getUser: user });
+    // Admin widgets: the admin of the chosen pizzeria.
+    const admin = (req) => { const pz = pizzeriaOf(queryOf(req).get('pizzeria')); return { tenant: pz.tenant(), ...pz.admin }; };
+    out.keys = lib.createApiblazeKeys({ cpKey: env('APIBLAZE_CP_KEY'), getUser: admin, environment: 'dev' });
+    out.groups = lib.createApiblazeGroups({ cpKey: env('APIBLAZE_CP_KEY'), getUser: admin });
   }
   return out;
 }
@@ -93,23 +106,30 @@ function startApp(port = Number(env('APP_PORT', '3000'))) {
           res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
           return res.end(fs.readFileSync(path.join(pub, 'index.html')));
         }
-        if (req.method === 'GET' && p === '/apiblaze-widgets.js' && fs.existsSync(path.join(pub, 'apiblaze-widgets.js'))) {
-          res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' });
-          return res.end(fs.readFileSync(path.join(pub, 'apiblaze-widgets.js')));
+        for (const asset of ['apiblaze-widgets.js', 'apiblaze-logo.svg']) {
+          if (req.method === 'GET' && p === `/${asset}` && fs.existsSync(path.join(pub, asset))) {
+            res.writeHead(200, { 'content-type': asset.endsWith('.svg') ? 'image/svg+xml' : 'text/javascript; charset=utf-8' });
+            return res.end(fs.readFileSync(path.join(pub, asset)));
+          }
         }
         if (p === '/api/config') {
           return json(res, 200, {
-            name: env('APIBLAZE_NAME'), apiUrl: env('APIBLAZE_URL'), mcpUrl: env('APIBLAZE_MCP_URL'),
-            portalUrl: env('APIBLAZE_PORTAL_URL'), gino: !!env('APIBLAZE_GINO_TENANT'),
-            backendPort: env('BACKEND_PORT', '3001'), widgets: { chat: !!w.chat, keys: !!w.keys, groups: !!w.groups },
+            apiUrl: env('APIBLAZE_URL'), mcpUrl: env('APIBLAZE_MCP_URL'), portalUrl: env('APIBLAZE_PORTAL_URL'),
+            backendPort: env('BACKEND_PORT', '3001'),
+            logsCommand: `npx apiblaze@latest logs ${env('APIBLAZE_NAME')} --tenant ${env('APIBLAZE_TENANT')}`,
+            pizzerias: Object.entries(PIZZERIAS).filter(([, pz]) => pz.tenant()).map(([id, pz]) => ({ id, label: pz.label, admin: pz.admin.label })),
+            widgets: { chat: Object.keys(w.chat || {}), keys: !!w.keys, groups: !!w.groups },
           });
         }
-        if (p === '/api/apiblaze/chat' && w.chat) return viaHandler(w.chat.handler, req, res, raw);
+        if (p === '/api/apiblaze/chat') {
+          const h = (w.chat || {})[url.searchParams.get('pizzeria') || 'nino'];
+          if (h) return viaHandler(h.handler, req, res, raw);
+        }
         if (p === '/api/apiblaze/keys' && w.keys) return viaHandler(w.keys.handler, req, res, raw);
         if (p === '/api/apiblaze/groups' && w.groups) return viaHandler(w.groups.handler, req, res, raw);
         if (req.method === 'POST' && p === '/api/act') {
           const b = JSON.parse(raw || '{}');
-          return json(res, 200, await call(String(b.op || 'list'), { as: String(b.as || 'ana'), id: b.id, key: b.key, body: b.body }));
+          return json(res, 200, await call(String(b.op || 'list'), { pizzeria: b.pizzeria, as: String(b.as || 'ana'), id: b.id, body: b.body, direct: !!b.direct }));
         }
         json(res, 404, { error: 'not found' });
       } catch (e) {

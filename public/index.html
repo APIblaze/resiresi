@@ -8,30 +8,51 @@
   :root {
     --bg: #faf7f2; --card: #fff; --ink: #1d1b19; --muted: #6b6560; --line: #e8e2d9; --soft: #f3eee6;
     --accent: #e4572e; --accent-ink: #fff; --good: #15803d; --good-bg: #ecfdf3; --bad: #c2410c; --bad-bg: #fff1e8;
-    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --blaze: #4f46e5; --blaze-bg: #eef2ff; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #161412; --card: #1f1c1a; --ink: #f3efe9; --muted: #a39b92; --line: #34302c; --soft: #26221f;
-      --good: #4ade80; --good-bg: #10241a; --bad: #fb923c; --bad-bg: #2b1a10; }
+      --good: #4ade80; --good-bg: #10241a; --bad: #fb923c; --bad-bg: #2b1a10; --blaze: #a5b4fc; --blaze-bg: #1e1b4b; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 1000px; margin: 0 auto; padding: 20px 16px 56px; }
-  .live { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 13px; color: var(--muted);
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
-  .live b { color: var(--ink); font-weight: 600; }
-  .live code { font-family: var(--mono); font-size: 12px; color: var(--ink); word-break: break-all; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #16a34a; margin-right: 6px; }
-  nav { display: flex; gap: 6px; margin: 18px 0 14px; }
-  nav button { border: 0; background: transparent; font-size: 17px; padding: 8px 14px; border-radius: 10px; cursor: pointer; color: var(--muted); }
-  nav button[aria-selected="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px 16px 56px; }
+
+  /* The mode switch: protected by APIblaze, or straight to localhost */
+  .mode { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 2px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--card); }
+  .mode button { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 0; background: transparent; color: var(--muted);
+    font-size: 16px; text-align: left; cursor: pointer; }
+  .mode button img { width: 32px; height: 32px; }
+  .mode button b { display: block; font-size: 17px; }
+  .mode button small { display: block; font-size: 13px; }
+  .mode button:hover { background: var(--soft); }
+  .mode button[aria-pressed="true"].protected { background: var(--blaze-bg); color: var(--blaze); box-shadow: inset 0 -4px 0 var(--blaze); }
+  .mode button[aria-pressed="true"].direct { background: var(--bad-bg); color: var(--bad); box-shadow: inset 0 -4px 0 var(--bad); }
+  .mode .icon { font-size: 26px; width: 32px; text-align: center; }
+
+  .live { margin-top: 10px; font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
+  .live code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); word-break: break-all; }
+  .live .arrow { color: var(--blaze); font-weight: 600; }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 18px 0 14px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+  .seg button { border: 0; border-right: 1px solid var(--line); background: transparent; padding: 9px 16px; font-size: 15px; cursor: pointer; color: var(--ink); }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: var(--soft); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); font-weight: 600; }
+  .seg.tabs button { font-size: 16px; padding: 10px 20px; }
+  .label { font-size: 13px; color: var(--muted); margin-right: 8px; }
+
   .who { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 15px; color: var(--muted); }
-  select { font-size: 15px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  select, input { font-size: 15px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  input[type=number] { width: 70px; }
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+  @media (max-width: 820px) { .cols, .mode { grid-template-columns: 1fr; } }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
   h2 { font-size: 19px; margin: 0 0 4px; }
   .sub { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+  .form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   button.act { background: var(--soft); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14px; cursor: pointer; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
   ul.res { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
@@ -45,6 +66,7 @@
   .out.bad { background: var(--bad-bg); color: var(--bad); font-weight: 600; }
   #chat { min-height: 460px; }
   .chatcard { padding: 0; overflow: hidden; }
+  .note { padding: 18px; color: var(--muted); }
   .next { margin-top: 16px; color: var(--muted); font-size: 15px; }
   .next a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 600; }
   .next code { font-family: var(--mono); font-size: 13px; }
@@ -53,13 +75,29 @@
 </head>
 <body>
 <main>
-  <div class="live"><span><span class="dot"></span><b>Running on your laptop, live on the internet</b></span>
-    <span>API <code id="api">…</code></span><span>MCP <code id="mcp">…</code></span></div>
+  <div class="mode" role="group" aria-label="How the website reaches the backend">
+    <button class="protected" id="mode-protected" aria-pressed="true">
+      <img src="/apiblaze-logo.svg" alt="APIblaze"><span><b>Protected and enhanced by APIblaze</b><small>keys, rules, tenants, AI tools</small></span>
+    </button>
+    <button class="direct" id="mode-direct" aria-pressed="false">
+      <span class="icon">⚠</span><span><b>Direct to localhost, unprotected</b><small>no APIblaze: anyone can do anything</small></span>
+    </button>
+  </div>
+  <div class="live" id="live-protected">
+    <div>API <code id="api">…</code> <span class="arrow">— APIblaze tunnel →</span> <code id="local">localhost</code></div>
+    <div>MCP <code id="mcp">…</code> <span>for AI assistants</span></div>
+  </div>
+  <div class="live" id="live-direct" hidden>
+    <div>Calling <code id="local2">localhost</code> directly with the backend secret. No API keys, no rules, no tenants checked.</div>
+  </div>
 
-  <nav role="tablist">
-    <button role="tab" id="tab-app" aria-selected="true">🍕 Nino's Pizza</button>
-    <button role="tab" id="tab-admin" aria-selected="false">⚙ Admin</button>
-  </nav>
+  <div class="bar">
+    <div><span class="label">Pizzeria (tenant)</span><span class="seg" id="pizzerias"></span></div>
+    <div class="seg tabs" role="tablist">
+      <button role="tab" id="tab-app" aria-pressed="true">🍕 Reservations</button>
+      <button role="tab" id="tab-admin" aria-pressed="false">⚙ Admin</button>
+    </div>
+  </div>
 
   <!-- THE APP: what a customer of the pizzeria sees -->
   <section id="app">
@@ -68,9 +106,13 @@
     </div>
     <div class="cols">
       <div class="card">
-        <h2>Your reservations</h2>
+        <h2>Your reservations at <span class="pz-name">Nino Pizza</span></h2>
         <p class="sub">Book here, or ask the assistant. Each person only sees their own.</p>
-        <button class="act primary" id="book">Book table 4 at 7:30pm</button>
+        <div class="form">
+          <label><input type="number" id="guests" min="1" max="20" value="2"> people</label>
+          <label>at <input type="time" id="time" value="19:30"></label>
+          <button class="act primary" id="book">Book a table</button>
+        </div>
         <ul class="res" id="list"><li class="empty">No reservations yet.</li></ul>
         <div id="try-ben" hidden>
           <p class="sub" style="margin:14px 0 6px">Ana booked a table. Can Ben cancel it?</p>
@@ -78,101 +120,150 @@
           <div id="ben-out"></div>
         </div>
       </div>
-      <div class="card chatcard"><div id="chat"></div></div>
+      <div class="card chatcard"><div id="chat"></div><div class="note" id="chat-off" hidden>The assistant only reaches your app through APIblaze (its MCP address). Switch back to <b>Protected</b> to chat.</div></div>
     </div>
-    <p class="next">Every request here went from the internet, through APIblaze, to your laptop: <code>npx apiblaze@latest demo logs</code> shows them. Next: <a id="go-admin">the admin side →</a></p>
+    <p class="next"><span id="foot-protected">Every request here reaches your laptop through APIblaze: <code id="logs-cmd">npx apiblaze@latest logs</code> shows them live.</span><span id="foot-direct" hidden>Every request here goes straight to <code class="local3">localhost</code>, skipping APIblaze: nothing checks who is asking.</span> Next: <a id="go-admin">the admin side →</a></p>
   </section>
 
   <!-- ADMIN: what each pizzeria's admin sees -->
   <section id="admin" hidden>
-    <div class="who">Signed in as
-      <select id="admin-as"><option value="ana">Ana, admin of Nino Pizza</option><option value="gina">Gina, admin of Gino Pizza</option></select>
-    </div>
-    <div class="stack">
+    <div class="who">Signed in as <b id="admin-name">Ana</b>, admin of <b class="pz-name">Nino Pizza</b></div>
+    <div class="stack" id="admin-widgets">
       <div class="card"><div id="keys"></div></div>
       <div class="card"><div id="groups"></div></div>
     </div>
-    <p class="next">Each pizzeria only sees its own keys and people. Developers can also sign in and get a key at the <a id="portal" target="_blank" rel="noopener">developer portal</a>.</p>
+    <div class="card note" id="admin-off" hidden>API keys and people are APIblaze features. Straight to localhost there is nothing to manage: anyone with the backend secret is everyone. Switch back to <b>Protected</b>.</div>
+    <p class="next">Each pizzeria only sees its own keys and people: switch pizzeria above. Developers can also sign in and get a key at the <a id="portal" target="_blank" rel="noopener">developer portal</a>.</p>
   </section>
 </main>
 <script src="/apiblaze-widgets.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
-const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch(() => ({ status: 0 }));
 const W = window.ApiblazeWidgets;
 const theme = { accent: '#e4572e' };
-let cfg = {};
-let anaBooking = null;
-
-// ── tabs ──
-function show(tab) {
-  $('#app').hidden = tab !== 'app'; $('#admin').hidden = tab !== 'admin';
-  $('#tab-app').setAttribute('aria-selected', tab === 'app'); $('#tab-admin').setAttribute('aria-selected', tab === 'admin');
-  if (tab === 'admin') mountAdmin();
-}
-$('#tab-app').onclick = () => show('app');
-$('#tab-admin').onclick = () => show('admin');
-$('#go-admin').onclick = () => show('admin');
-
-// ── the app ──
+const state = { direct: false, pizzeria: 'nino', tab: 'app' };
+let cfg = null;
+const ready = fetch('/api/config').then((r) => r.json()).then((c) => { cfg = c; return c; });
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch(() => ({ status: 0 }));
+const act = (op, extra) => post('/api/act', { op, pizzeria: state.pizzeria, as: me(), direct: state.direct, ...extra });
 const me = () => $('#as').value;
+const pz = () => (cfg?.pizzerias || []).find((p) => p.id === state.pizzeria) || { label: 'Nino Pizza', admin: 'Ana' };
+const anaBooking = {};
+
+// ── mode, pizzeria, tab ──
+function setMode(direct) {
+  state.direct = direct;
+  $('#mode-protected').setAttribute('aria-pressed', !direct); $('#mode-direct').setAttribute('aria-pressed', direct);
+  $('#live-protected').hidden = direct; $('#live-direct').hidden = !direct;
+  $('#foot-protected').hidden = direct; $('#foot-direct').hidden = !direct;
+  $('#ben-out').replaceChildren();
+  render();
+}
+$('#mode-protected').onclick = () => setMode(false);
+$('#mode-direct').onclick = () => setMode(true);
+function setTab(tab) {
+  state.tab = tab;
+  $('#app').hidden = tab !== 'app'; $('#admin').hidden = tab !== 'admin';
+  $('#tab-app').setAttribute('aria-pressed', tab === 'app'); $('#tab-admin').setAttribute('aria-pressed', tab === 'admin');
+  render();
+}
+$('#tab-app').onclick = () => setTab('app');
+$('#tab-admin').onclick = () => setTab('admin');
+$('#go-admin').onclick = () => setTab('admin');
+function setPizzeria(id) {
+  state.pizzeria = id;
+  document.querySelectorAll('#pizzerias button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.id === id));
+  $('#ben-out').replaceChildren();
+  render();
+}
+
+async function render() {
+  await ready;
+  document.querySelectorAll('.pz-name').forEach((e) => { e.textContent = pz().label; });
+  if (state.tab === 'app') { await refresh(); mountChat(); } else mountAdmin();
+}
+
+// ── reservations ──
 const seen = new Set();
 async function refresh() {
-  const r = await post('/api/act', { op: 'list', as: me() });
+  const r = await act('list');
   const rows = Array.isArray(r.body) ? r.body : [];
-  if (me() === 'ana') anaBooking = rows.length ? rows[0].id : null;
+  if (me() === 'ana') anaBooking[state.pizzeria] = rows.length ? rows[0].id : null;
   const ul = $('#list'); ul.replaceChildren();
-  if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No reservations yet.'; ul.append(li); }
+  if (r.status && r.status !== 200) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Could not load reservations (HTTP ' + r.status + ').'; ul.append(li); }
+  else if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No reservations yet.'; ul.append(li); }
   for (const b of rows) {
     const li = document.createElement('li');
     if (!seen.has(b.id)) { li.className = 'new'; seen.add(b.id); }
     const t = document.createElement('span');
-    t.textContent = `Table ${b.table} · ${b.time} · ${b.guests || 2} people · #${b.id}`;
+    t.textContent = `${b.guests || 2} people · ${b.time} · table ${b.table} · #${b.id}`;
     const x = document.createElement('button'); x.className = 'act'; x.textContent = 'Cancel';
-    x.onclick = async () => { await post('/api/act', { op: 'cancel', as: me(), id: b.id }); refresh(); };
+    x.onclick = async () => { await act('cancel', { id: b.id }); refresh(); };
     li.append(t, x); ul.append(li);
   }
-  $('#try-ben').hidden = !(me() === 'ben' && anaBooking);
+  $('#try-ben').hidden = !(me() === 'ben' && anaBooking[state.pizzeria]);
 }
-$('#book').onclick = async () => { await post('/api/act', { op: 'book', as: me() }); refresh(); };
+$('#book').onclick = async () => {
+  const guests = Math.max(1, Number($('#guests').value) || 2);
+  const time = $('#time').value || '19:30';
+  await act('book', { body: { guests, time, table: 4 } });
+  refresh();
+};
 $('#ben-cancel').onclick = async () => {
-  const r = await post('/api/act', { op: 'cancel', as: 'ben', id: anaBooking });
+  const r = await post('/api/act', { op: 'cancel', pizzeria: state.pizzeria, as: 'ben', id: anaBooking[state.pizzeria], direct: state.direct });
   const d = document.createElement('div');
   if (r.status === 403) { d.className = 'out good'; d.textContent = "🛡 Blocked. Only Ana can cancel Ana's booking. APIblaze decided, not the app's code."; }
-  else { d.className = 'out bad'; d.textContent = r.status === 204 ? 'Cancelled. That should not happen.' : 'Something went wrong (HTTP ' + r.status + ').'; }
+  else if (r.status === 204) { d.className = 'out bad'; d.textContent = "Cancelled. Straight to localhost, nothing stopped Ben."; anaBooking[state.pizzeria] = null; }
+  else { d.className = 'out bad'; d.textContent = 'Something went wrong (HTTP ' + r.status + ').'; }
   $('#ben-out').replaceChildren(d);
 };
+$('#as').onchange = () => { $('#ben-out').replaceChildren(); render(); };
+setInterval(() => { if (state.tab === 'app') refresh(); }, 2000); // the assistant's bookings appear here
+
+// ── chat ──
+let chatKey = '';
 function mountChat() {
-  if (!W || !cfg.widgets || !cfg.widgets.chat) return;
+  $('#chat').hidden = state.direct; $('#chat-off').hidden = !state.direct;
+  if (state.direct || !W || !(cfg.widgets.chat || []).includes(state.pizzeria)) return;
+  const key = state.pizzeria + ':' + me();
+  if (key === chatKey) return;
+  chatKey = key;
   const who = me() === 'ben' ? 'Ben' : 'Ana';
   $('#chat').replaceChildren();
-  W.chat('#chat', { endpoint: '/api/apiblaze/chat?as=' + me(), mode: 'inline', title: "Nino's Pizza assistant", avatar: '🍕', height: 520, theme,
-    storageKey: 'nino-chat-' + me(),
-    welcome: `Hi ${who}! I can book, list and cancel your tables. I'm using the app on your laptop, through APIblaze.`,
-    suggestions: ['Book table 2 for 4 people at 8pm', 'What are my reservations?'] });
+  W.chat('#chat', { endpoint: `/api/apiblaze/chat?pizzeria=${state.pizzeria}&as=${me()}`, mode: 'inline', title: `${pz().label} assistant`, avatar: '🍕', height: 520, theme,
+    storageKey: 'pizza-chat-' + key,
+    welcome: `Hi ${who}! I can book, list and cancel your tables at ${pz().label}. I'm using the app on your laptop, through APIblaze.`,
+    suggestions: ['Book a table for 4 people at 8pm', 'What are my reservations?'] });
 }
-$('#as').onchange = () => { $('#ben-out').replaceChildren(); refresh(); mountChat(); };
-setInterval(() => { if (!$('#app').hidden) refresh(); }, 2000); // the assistant's bookings appear here
 
 // ── admin ──
+let adminKey = '';
 function mountAdmin() {
-  if (!W) return;
-  const as = $('#admin-as').value;
+  $('#admin-widgets').hidden = state.direct; $('#admin-off').hidden = !state.direct;
+  $('#admin-name').textContent = pz().admin;
+  if (state.direct || !W) return;
+  if (adminKey === state.pizzeria && $('#keys').childElementCount) return;
+  adminKey = state.pizzeria;
   for (const id of ['#keys', '#groups']) $(id).replaceChildren();
-  if (cfg.widgets && cfg.widgets.keys) W.keys('#keys', { endpoint: '/api/apiblaze/keys?as=' + as, theme, title: 'API keys' });
-  if (cfg.widgets && cfg.widgets.groups) W.groups('#groups', { endpoint: '/api/apiblaze/groups?as=' + as, theme, title: 'People and groups' });
+  if (cfg.widgets.keys) W.keys('#keys', { endpoint: '/api/apiblaze/keys?pizzeria=' + state.pizzeria, theme, title: `API keys · ${pz().label}` });
+  if (cfg.widgets.groups) W.groups('#groups', { endpoint: '/api/apiblaze/groups?pizzeria=' + state.pizzeria, theme, title: `People and groups · ${pz().label}` });
 }
-$('#admin-as').onchange = mountAdmin;
 
-fetch('/api/config').then((r) => r.json()).then((c) => {
-  cfg = c;
+ready.then((c) => {
   $('#api').textContent = c.apiUrl || 'not connected';
   $('#mcp').textContent = c.mcpUrl || 'not connected';
+  $('#local').textContent = $('#local2').textContent = 'localhost:' + c.backendPort;
+  document.querySelectorAll('.local3').forEach((e) => { e.textContent = 'localhost:' + c.backendPort; });
+  if (c.logsCommand) $('#logs-cmd').textContent = c.logsCommand;
   if (c.portalUrl) $('#portal').href = c.portalUrl;
-  if (!c.gino) { const o = $('#admin-as').querySelector('[value="gina"]'); if (o) o.remove(); }
-  if (!c.widgets || (!c.widgets.keys && !c.widgets.groups)) $('#tab-admin').hidden = true;
-  refresh(); mountChat();
-  if (location.hash === '#admin') show('admin');
+  for (const p of c.pizzerias) {
+    const b = document.createElement('button'); b.dataset.id = p.id; b.textContent = p.label;
+    b.setAttribute('aria-pressed', p.id === state.pizzeria); b.onclick = () => setPizzeria(p.id);
+    $('#pizzerias').append(b);
+  }
+  if (!c.widgets.keys && !c.widgets.groups) $('#tab-admin').hidden = true;
+  if (new URLSearchParams(location.search).get('mode') === 'direct') setMode(true);
+  setTab(location.hash === '#admin' ? 'admin' : 'app');
 });
 </script>
 </body>

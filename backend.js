@@ -9,6 +9,8 @@
 // What APIblaze tells this backend about each call, in two headers:
 //   x-abz-tenant-id  which customer (pizzeria) is calling
 //   x-abz-user-id    which person
+// and one shared secret it adds to every call it forwards (x-target-api-key), so a
+// caller who skips APIblaze and hits localhost:3001 directly is refused.
 //
 // Zero dependencies. Run it alone with `node backend.js` (port 3001).
 
@@ -42,7 +44,9 @@ function handle(req, res, body) {
   const who = req.headers['x-abz-user-id'] || '';
   const tenant = req.headers['x-abz-tenant-id'] || '';
   const reply = (status, data) => { remember({ method: req.method, path: url.pathname, who, tenant, status }); send(res, status, data); };
-  if (!who) return reply(401, { error: 'calls come through APIblaze, which says who is calling' });
+  const secret = process.env.BACKEND_SECRET || '';
+  if (secret && req.headers['x-target-api-key'] !== secret) return reply(401, { error: 'missing or wrong backend secret (APIblaze adds it to every call it forwards)' });
+  if (!who) return reply(401, { error: 'say who is calling (x-abz-user-id)' });
 
   const m = /^\/reservations(?:\/([^/]+))?$/.exec(url.pathname);
   if (!m) return reply(404, { error: 'not found' });

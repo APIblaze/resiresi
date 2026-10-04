@@ -23,6 +23,9 @@ const recent = [];
 function remember(entry) {
   recent.unshift({ at: Date.now(), ...entry });
   recent.length = Math.min(recent.length, 50);
+  // One line per request in the terminal (`npx apiblaze@latest demo logs` follows it).
+  const who = entry.who ? `${entry.who}${entry.tenant ? ` @ ${entry.tenant}` : ''}` : '-';
+  console.log(`${new Date().toISOString().slice(11, 19)}  ${entry.status}  ${entry.method.padEnd(6)} ${entry.path.padEnd(22)} ${who}`);
 }
 
 function send(res, status, body) {

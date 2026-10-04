@@ -8,7 +8,7 @@
   :root {
     --bg: #faf7f2; --card: #fff; --ink: #1d1b19; --muted: #6b6560; --line: #e8e2d9; --soft: #f3eee6;
     --accent: #e4572e; --accent-ink: #fff; --good: #15803d; --good-bg: #ecfdf3; --bad: #c2410c; --bad-bg: #fff1e8;
-    --live: #16a34a; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #161412; --card: #1f1c1a; --ink: #f3efe9; --muted: #a39b92; --line: #34302c; --soft: #26221f;
@@ -16,188 +16,163 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 1080px; margin: 0 auto; padding: 28px 16px 64px; }
-  h1 { font-size: 30px; margin: 0; letter-spacing: -0.02em; }
-  .lede { font-size: 18px; color: var(--muted); margin: 6px 0 20px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
-  .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
-  @media (max-width: 820px) { .hero, .grid { grid-template-columns: 1fr !important; } }
-  .addr { display: grid; gap: 14px; }
-  .addr .label { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-  .addr .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  code, .mono { font-family: var(--mono); font-size: 13px; }
-  .url { background: var(--soft); padding: 8px 10px; border-radius: 10px; word-break: break-all; flex: 1; min-width: 0; }
-  button { background: var(--soft); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 13px; font-size: 14px; cursor: pointer; }
-  button:hover { border-color: var(--muted); }
-  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
-  .hint { color: var(--muted); font-size: 14px; margin: 2px 0 0; }
-  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--live); margin-right: 6px; box-shadow: 0 0 0 0 rgba(22,163,74,.6); animation: pulse 1.6s infinite; }
-  @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
-  .ticker { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
-  .ticker ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; max-height: 230px; overflow: auto; }
-  .ticker li { font-family: var(--mono); font-size: 12.5px; background: var(--soft); border-radius: 8px; padding: 6px 9px; display: flex; gap: 8px; }
-  .ticker li.new { animation: flash 1.2s ease-out; }
-  @keyframes flash { from { background: var(--good-bg); } }
-  .ticker .st { margin-left: auto; color: var(--muted); }
-  .empty { color: var(--muted); font-size: 14px; }
-  h2 { font-size: 20px; margin: 0 0 4px; }
-  h3 { font-size: 17px; margin: 0 0 4px; }
-  .section { margin: 28px 0 10px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .grid .card { padding: 16px; }
+  main { max-width: 1000px; margin: 0 auto; padding: 20px 16px 56px; }
+  .live { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 13px; color: var(--muted);
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+  .live b { color: var(--ink); font-weight: 600; }
+  .live code { font-family: var(--mono); font-size: 12px; color: var(--ink); word-break: break-all; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #16a34a; margin-right: 6px; }
+  nav { display: flex; gap: 6px; margin: 18px 0 14px; }
+  nav button { border: 0; background: transparent; font-size: 17px; padding: 8px 14px; border-radius: 10px; cursor: pointer; color: var(--muted); }
+  nav button[aria-selected="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+  .who { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 15px; color: var(--muted); }
+  select { font-size: 15px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  h2 { font-size: 19px; margin: 0 0 4px; }
   .sub { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
-  .out { border-radius: 10px; padding: 8px 10px; font-size: 14px; margin-top: 10px; background: var(--soft); }
+  button.act { background: var(--soft); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+  ul.res { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+  ul.res li { display: flex; align-items: center; gap: 10px; background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+  ul.res li.new { animation: flash 1.5s ease-out; }
+  @keyframes flash { from { background: var(--good-bg); } }
+  ul.res li span { flex: 1; }
+  .empty { color: var(--muted); font-size: 14px; }
+  .out { border-radius: 10px; padding: 8px 10px; font-size: 14px; margin-top: 10px; }
   .out.good { background: var(--good-bg); color: var(--good); font-weight: 600; }
   .out.bad { background: var(--bad-bg); color: var(--bad); font-weight: 600; }
-  .out small { display: block; font-weight: 400; color: var(--muted); font-family: var(--mono); font-size: 12px; }
-  .wide { grid-column: span 3; }
-  @media (max-width: 820px) { .wide { grid-column: auto; } }
-  .footer { margin-top: 26px; font-size: 17px; }
-  #chat { min-height: 420px; }
+  #chat { min-height: 460px; }
+  .chatcard { padding: 0; overflow: hidden; }
+  .next { margin-top: 16px; color: var(--muted); font-size: 15px; }
+  .next a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 600; }
+  .next code { font-family: var(--mono); font-size: 13px; }
+  .stack { display: grid; gap: 16px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>🍕 Nino's Pizza</h1>
-  <p class="lede">This booking app is running on your laptop. One command put it on the internet, with a door for AI assistants. You wrote no code for it.</p>
+  <div class="live"><span><span class="dot"></span><b>Running on your laptop, live on the internet</b></span>
+    <span>API <code id="api">…</code></span><span>MCP <code id="mcp">…</code></span></div>
 
-  <section class="hero">
-    <div class="card">
-      <div class="addr">
-        <div>
-          <div class="label"><span class="dot"></span>Your API, live on the internet</div>
-          <div class="row"><span class="url mono" id="api">…</span><button data-copy="api">Copy</button></div>
-          <p class="hint">Anyone you give a key to can call it from anywhere. It's answered by <span class="mono" id="local">localhost</span> on this machine.</p>
-        </div>
-        <div>
-          <div class="label">🤖 Its MCP address, for AI assistants</div>
-          <div class="row"><span class="url mono" id="mcp">…</span><button data-copy="mcp">Copy</button></div>
-          <p class="hint">Paste it into Claude, ChatGPT or Cursor and they can use your app, under the same rules.</p>
+  <nav role="tablist">
+    <button role="tab" id="tab-app" aria-selected="true">🍕 Nino's Pizza</button>
+    <button role="tab" id="tab-admin" aria-selected="false">⚙ Admin</button>
+  </nav>
+
+  <!-- THE APP: what a customer of the pizzeria sees -->
+  <section id="app">
+    <div class="who">Signed in as
+      <select id="as"><option value="ana">Ana</option><option value="ben">Ben</option></select>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <h2>Your reservations</h2>
+        <p class="sub">Book here, or ask the assistant. Each person only sees their own.</p>
+        <button class="act primary" id="book">Book table 4 at 7:30pm</button>
+        <ul class="res" id="list"><li class="empty">No reservations yet.</li></ul>
+        <div id="try-ben" hidden>
+          <p class="sub" style="margin:14px 0 6px">Ana booked a table. Can Ben cancel it?</p>
+          <button class="act" id="ben-cancel">Cancel Ana's booking</button>
+          <div id="ben-out"></div>
         </div>
       </div>
-      <div class="ticker">
-        <div class="label" style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Requests reaching your laptop, live</div>
-        <ol id="ticker"><li class="empty" id="ticker-empty">Nothing yet. Ask the assistant to book a table →</li></ol>
-      </div>
+      <div class="card chatcard"><div id="chat"></div></div>
     </div>
-    <div class="card" style="padding:0;overflow:hidden"><div id="chat"></div></div>
+    <p class="next">Every request here went from the internet, through APIblaze, to your laptop: <code>npx apiblaze@latest demo logs</code> shows them. Next: <a id="go-admin">the admin side →</a></p>
   </section>
 
-  <div class="section">Included with every APIblaze API, still no code</div>
-  <section class="grid">
-    <div class="card">
-      <h3>🛡 Only the owner can change it</h3>
-      <p class="sub">Ana books a table. Ben tries to cancel it.</p>
-      <button id="rule">Ben cancels Ana's booking</button>
-      <div id="rule-out"></div>
+  <!-- ADMIN: what each pizzeria's admin sees -->
+  <section id="admin" hidden>
+    <div class="who">Signed in as
+      <select id="admin-as"><option value="ana">Ana, admin of Nino Pizza</option><option value="gina">Gina, admin of Gino Pizza</option></select>
     </div>
-    <div class="card" id="tenants" hidden>
-      <h3>🏢 Each customer is separate</h3>
-      <p class="sub">Nino Pizza and Gino Pizza use the same app, each with its own key.</p>
-      <button id="gino">Gino's key asks for Nino's booking</button>
-      <div id="gino-out"></div>
+    <div class="stack">
+      <div class="card"><div id="keys"></div></div>
+      <div class="card"><div id="groups"></div></div>
     </div>
-    <div class="card" id="rate-card" hidden>
-      <h3>⏱ Rate limits</h3>
-      <p class="sub">Each customer gets <span id="rps">a few</span> calls a second. Send 30 at once and see what happens.</p>
-      <button id="hammer">Send 30 calls at once</button>
-      <div id="hammer-out"></div>
-    </div>
-    <div class="card">
-      <h3>🔐 Sign-in</h3>
-      <p class="sub">People and AI agents can sign in with GitHub instead of a key. Your API has a developer portal for that.</p>
-      <a id="portal" href="#" target="_blank" rel="noopener"><button>Open the developer portal</button></a>
-    </div>
-    <div class="card wide" id="keys-card" hidden>
-      <h3>🔑 API keys, self-serve</h3>
-      <p class="sub">Drop this widget into your site and each customer makes their own keys.</p>
-      <div id="keys"></div>
-    </div>
-    <div class="card wide" id="groups-card" hidden>
-      <h3>👥 Users and roles</h3>
-      <p class="sub">Put people in groups. Rules can say "only staff may cancel".</p>
-      <div id="groups"></div>
-    </div>
+    <p class="next">Each pizzeria only sees its own keys and people. Developers can also sign in and get a key at the <a id="portal" target="_blank" rel="noopener">developer portal</a>.</p>
   </section>
-
-  <p class="footer">This is exactly what <code>npx apiblaze@latest dev</code> does for your own app. Ask Claude: <b>"Put my app on APIblaze."</b></p>
 </main>
 <script src="/apiblaze-widgets.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
-const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch((e) => ({ status: 0, error: String(e) }));
-function out(el, cls, text, detail) {
-  const d = document.createElement('div'); d.className = 'out ' + (cls || ''); d.textContent = text;
-  if (detail) { const s = document.createElement('small'); s.textContent = detail; d.appendChild(s); }
-  $(el).replaceChildren(d);
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch(() => ({ status: 0 }));
+const W = window.ApiblazeWidgets;
+const theme = { accent: '#e4572e' };
+let cfg = {};
+let anaBooking = null;
+
+// ── tabs ──
+function show(tab) {
+  $('#app').hidden = tab !== 'app'; $('#admin').hidden = tab !== 'admin';
+  $('#tab-app').setAttribute('aria-selected', tab === 'app'); $('#tab-admin').setAttribute('aria-selected', tab === 'admin');
+  if (tab === 'admin') mountAdmin();
 }
-document.querySelectorAll('[data-copy]').forEach((b) => b.onclick = () => { navigator.clipboard?.writeText($('#' + b.dataset.copy).textContent); b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 1200); });
+$('#tab-app').onclick = () => show('app');
+$('#tab-admin').onclick = () => show('admin');
+$('#go-admin').onclick = () => show('admin');
 
-let bookingId = null;
-async function book() { const r = await post('/api/act', { op: 'book', as: 'ana' }); if (r.status === 201) bookingId = r.body.id; return r; }
-
-$('#rule').onclick = async () => {
-  if (!bookingId) await book();
-  const r = await post('/api/act', { op: 'cancel', as: 'ben', id: bookingId });
-  if (r.status === 403) out('#rule-out', 'good', "🛡 Blocked. Only Ana can cancel Ana's booking.", 'HTTP 403 · decided by APIblaze, not your code');
-  else if (r.status === 204) { out('#rule-out', 'bad', 'Cancelled. That should not happen.', 'HTTP 204'); bookingId = null; }
-  else out('#rule-out', 'bad', explain(r), 'HTTP ' + r.status);
-};
-$('#gino').onclick = async () => {
-  if (!bookingId) await book();
-  const r = await post('/api/act', { op: 'open', as: 'ana', id: bookingId, key: 'gino' });
-  if (r.status === 403 || r.status === 404) out('#gino-out', 'good', "🛡 Blocked. Gino Pizza only sees Gino Pizza's bookings.", 'HTTP ' + r.status);
-  else out('#gino-out', 'bad', r.status === 200 ? "Gino Pizza can read Nino's booking." : explain(r), 'HTTP ' + r.status);
-};
-$('#hammer').onclick = async () => {
-  out('#hammer-out', '', 'Sending…');
-  const r = await post('/api/hammer');
-  out('#hammer-out', 'good', `${r.served} served, ${r.limited} told to slow down.`, `${r.sent} calls · HTTP 200 × ${r.served}, 429 × ${r.limited}`);
-};
-function explain(r) {
-  if (r.status === 402) return 'The free demo calls ran out. Run again: npx apiblaze@latest demo';
-  if (r.status === 429) return 'Too many calls at once. Wait a second.';
-  if (!r.status || r.status >= 500) return 'The connection to APIblaze dropped. Run again: npx apiblaze@latest demo';
-  return (r.body && (r.body.detail || r.body.error)) || 'Something went wrong';
-}
-
-// Live ticker: what the backend on this laptop just answered.
+// ── the app ──
+const me = () => $('#as').value;
 const seen = new Set();
-async function tick() {
-  try {
-    const rows = await fetch('/api/ticker').then((r) => r.json());
-    if (rows.length) $('#ticker-empty')?.remove();
-    for (const r of rows.slice().reverse()) {
-      const k = r.at + r.method + r.path + r.who;
-      if (seen.has(k)) continue; seen.add(k);
-      const li = document.createElement('li'); li.className = 'new';
-      const t = new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const who = r.who ? `${r.who}${r.tenant ? ' @ ' + r.tenant.replace(/[0-9a-f]{4}$/, '') : ''}` : '';
-      // Text only: these values come from requests made on the internet.
-      for (const [tag, text, cls] of [['span', t], ['b', r.method], ['span', r.path], ['span', who], ['span', String(r.status), 'st']]) {
-        const el = document.createElement(tag); el.textContent = text; if (cls) el.className = cls; li.appendChild(el);
-      }
-      $('#ticker').prepend(li);
-    }
-  } catch { /* the page keeps working */ }
+async function refresh() {
+  const r = await post('/api/act', { op: 'list', as: me() });
+  const rows = Array.isArray(r.body) ? r.body : [];
+  if (me() === 'ana') anaBooking = rows.length ? rows[0].id : null;
+  const ul = $('#list'); ul.replaceChildren();
+  if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No reservations yet.'; ul.append(li); }
+  for (const b of rows) {
+    const li = document.createElement('li');
+    if (!seen.has(b.id)) { li.className = 'new'; seen.add(b.id); }
+    const t = document.createElement('span');
+    t.textContent = `Table ${b.table} · ${b.time} · ${b.guests || 2} people · #${b.id}`;
+    const x = document.createElement('button'); x.className = 'act'; x.textContent = 'Cancel';
+    x.onclick = async () => { await post('/api/act', { op: 'cancel', as: me(), id: b.id }); refresh(); };
+    li.append(t, x); ul.append(li);
+  }
+  $('#try-ben').hidden = !(me() === 'ben' && anaBooking);
 }
-setInterval(tick, 1000);
+$('#book').onclick = async () => { await post('/api/act', { op: 'book', as: me() }); refresh(); };
+$('#ben-cancel').onclick = async () => {
+  const r = await post('/api/act', { op: 'cancel', as: 'ben', id: anaBooking });
+  const d = document.createElement('div');
+  if (r.status === 403) { d.className = 'out good'; d.textContent = "🛡 Blocked. Only Ana can cancel Ana's booking. APIblaze decided, not the app's code."; }
+  else { d.className = 'out bad'; d.textContent = r.status === 204 ? 'Cancelled. That should not happen.' : 'Something went wrong (HTTP ' + r.status + ').'; }
+  $('#ben-out').replaceChildren(d);
+};
+function mountChat() {
+  if (!W || !cfg.widgets || !cfg.widgets.chat) return;
+  const who = me() === 'ben' ? 'Ben' : 'Ana';
+  $('#chat').replaceChildren();
+  W.chat('#chat', { endpoint: '/api/apiblaze/chat?as=' + me(), mode: 'inline', title: "Nino's Pizza assistant", avatar: '🍕', height: 520, theme,
+    storageKey: 'nino-chat-' + me(),
+    welcome: `Hi ${who}! I can book, list and cancel your tables. I'm using the app on your laptop, through APIblaze.`,
+    suggestions: ['Book table 2 for 4 people at 8pm', 'What are my reservations?'] });
+}
+$('#as').onchange = () => { $('#ben-out').replaceChildren(); refresh(); mountChat(); };
+setInterval(() => { if (!$('#app').hidden) refresh(); }, 2000); // the assistant's bookings appear here
+
+// ── admin ──
+function mountAdmin() {
+  if (!W) return;
+  const as = $('#admin-as').value;
+  for (const id of ['#keys', '#groups']) $(id).replaceChildren();
+  if (cfg.widgets && cfg.widgets.keys) W.keys('#keys', { endpoint: '/api/apiblaze/keys?as=' + as, theme, title: 'API keys' });
+  if (cfg.widgets && cfg.widgets.groups) W.groups('#groups', { endpoint: '/api/apiblaze/groups?as=' + as, theme, title: 'People and groups' });
+}
+$('#admin-as').onchange = mountAdmin;
 
 fetch('/api/config').then((r) => r.json()).then((c) => {
+  cfg = c;
   $('#api').textContent = c.apiUrl || 'not connected';
   $('#mcp').textContent = c.mcpUrl || 'not connected';
-  $('#local').textContent = 'localhost:' + c.backendPort;
-  if (c.portalUrl) $('#portal').href = c.portalUrl; else $('#portal').hidden = true;
-  if (c.ginoKey) $('#tenants').hidden = false;
-  if (c.rps) $('#rps').textContent = c.rps;
-  if (c.rateCard) $('#rate-card').hidden = false;
-  const W = window.ApiblazeWidgets;
-  const theme = { accent: '#e4572e' };
-  if (W && c.widgets.chat) W.chat('#chat', { endpoint: '/api/apiblaze/chat', mode: 'inline', title: "Nino's Pizza assistant", avatar: '🍕', height: 520, theme,
-    welcome: "Hi Ana! I can book, list and cancel tables at Nino's Pizza. I'm using the app on your laptop, through APIblaze.",
-    suggestions: ['Book table 4 for 2 people at 7:30pm', 'What are my bookings?', "Cancel booking r1"] });
-  if (W && c.widgets.keys) { $('#keys-card').hidden = false; W.keys('#keys', { endpoint: '/api/apiblaze/keys', theme }); }
-  if (W && c.widgets.groups) { $('#groups-card').hidden = false; W.groups('#groups', { endpoint: '/api/apiblaze/groups', theme }); }
+  if (c.portalUrl) $('#portal').href = c.portalUrl;
+  if (!c.gino) { const o = $('#admin-as').querySelector('[value="gina"]'); if (o) o.remove(); }
+  if (!c.widgets || (!c.widgets.keys && !c.widgets.groups)) $('#tab-admin').hidden = true;
+  refresh(); mountChat();
+  if (location.hash === '#admin') show('admin');
 });
 </script>
 </body>

@@ -8,7 +8,6 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { recent } = require('./backend');
 
 const env = (name, fallback = '') => process.env[name] || fallback;
 const json = (res, status, body) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -17,8 +16,18 @@ const mask = (k) => (k ? `${k.slice(0, 7)}••••${k.slice(-4)}` : '');
 let lib = null;
 try { lib = require('./lib/apiblaze-server.js'); } catch { /* run without the widgets */ }
 
-// The person using the page. A real app takes this from its own login.
-const ME = { userId: 'ana', email: 'ana@ninopizza.example', label: 'Ana' };
+// Who is using the page. A real app takes this from its own login; the demo lets you switch.
+//   App tab:   ana, ben  — customers of Nino Pizza
+//   Admin tab: ana       — admin of Nino Pizza;  gina — admin of Gino Pizza
+const PEOPLE = {
+  ana: { userId: 'ana', label: 'Ana', email: 'ana@ninopizza.example', tenant: () => env('APIBLAZE_TENANT') },
+  ben: { userId: 'ben', label: 'Ben', email: 'ben@ninopizza.example', tenant: () => env('APIBLAZE_TENANT') },
+  gina: { userId: 'gina', label: 'Gina', email: 'gina@ginopizza.example', tenant: () => env('APIBLAZE_GINO_TENANT') },
+};
+function personOf(req) {
+  const as = new URL(req.url, 'http://x').searchParams.get('as') || 'ana';
+  return PEOPLE[as] || PEOPLE.ana;
+}
 
 async function call(op, { as = 'ana', id, key = 'nino', body } = {}) {
   const base = env('APIBLAZE_URL').replace(/\/$/, '');
@@ -27,7 +36,7 @@ async function call(op, { as = 'ana', id, key = 'nino', body } = {}) {
     'x-api-key': key === 'gino' ? env('APIBLAZE_GINO_KEY') : env('APIBLAZE_SERVER_KEY'),
     'x-end-user-id': as,
   };
-  const req = op === 'book' ? { method: 'POST', url: `${base}/reservations`, body: JSON.stringify(body || { name: 'Ana', table: 4, time: '19:30', guests: 2 }) }
+  const req = op === 'book' ? { method: 'POST', url: `${base}/reservations`, body: JSON.stringify(body || { name: (PEOPLE[as] || PEOPLE.ana).label, table: 4, time: '19:30', guests: 2 }) }
     : op === 'cancel' ? { method: 'DELETE', url: `${base}/reservations/${encodeURIComponent(id || '')}` }
       : op === 'open' ? { method: 'GET', url: `${base}/reservations/${encodeURIComponent(id || '')}` }
         : { method: 'GET', url: `${base}/reservations` };
@@ -57,15 +66,13 @@ async function viaHandler(handler, req, res, raw) {
 
 function widgets() {
   if (!lib) return {};
-  const project = env('APIBLAZE_NAME');
-  const tenant = env('APIBLAZE_TENANT');
   const out = {};
   out.chat = lib.createApiblazeChat({
-    project: `${project}-${tenant}`, apiKey: env('APIBLAZE_SERVER_KEY'),
-    host: 'tryabz.run', environment: 'dev', getUser: () => ({ userId: ME.userId }),
+    project: `${env('APIBLAZE_NAME')}-${env('APIBLAZE_TENANT')}`, apiKey: env('APIBLAZE_SERVER_KEY'),
+    host: 'tryabz.run', environment: 'dev', getUser: (req) => ({ userId: personOf(req).userId }),
   });
   if (env('APIBLAZE_CP_KEY') && env('APIBLAZE_WIDGETS') === '1') {
-    const user = () => ({ tenant, userId: ME.userId, email: ME.email, label: ME.label });
+    const user = (req) => { const p = personOf(req); return { tenant: p.tenant(), userId: p.userId, email: p.email, label: p.label }; };
     out.keys = lib.createApiblazeKeys({ cpKey: env('APIBLAZE_CP_KEY'), getUser: user, environment: 'dev' });
     out.groups = lib.createApiblazeGroups({ cpKey: env('APIBLAZE_CP_KEY'), getUser: user });
   }
@@ -93,24 +100,16 @@ function startApp(port = Number(env('APP_PORT', '3000'))) {
         if (p === '/api/config') {
           return json(res, 200, {
             name: env('APIBLAZE_NAME'), apiUrl: env('APIBLAZE_URL'), mcpUrl: env('APIBLAZE_MCP_URL'),
-            portalUrl: env('APIBLAZE_PORTAL_URL'), key: mask(env('APIBLAZE_SERVER_KEY')), ginoKey: mask(env('APIBLAZE_GINO_KEY')),
-            backendPort: env('BACKEND_PORT', '3001'), rps: Number(env('APIBLAZE_DEMO_RPS')) || null, rateCard: env('APIBLAZE_RATE_CARD') === '1', widgets: { chat: !!w.chat, keys: !!w.keys, groups: !!w.groups },
+            portalUrl: env('APIBLAZE_PORTAL_URL'), gino: !!env('APIBLAZE_GINO_TENANT'),
+            backendPort: env('BACKEND_PORT', '3001'), widgets: { chat: !!w.chat, keys: !!w.keys, groups: !!w.groups },
           });
         }
-        if (p === '/api/ticker') return json(res, 200, recent.slice(0, 12));
         if (p === '/api/apiblaze/chat' && w.chat) return viaHandler(w.chat.handler, req, res, raw);
         if (p === '/api/apiblaze/keys' && w.keys) return viaHandler(w.keys.handler, req, res, raw);
         if (p === '/api/apiblaze/groups' && w.groups) return viaHandler(w.groups.handler, req, res, raw);
         if (req.method === 'POST' && p === '/api/act') {
           const b = JSON.parse(raw || '{}');
           return json(res, 200, await call(String(b.op || 'list'), { as: String(b.as || 'ana'), id: b.id, key: b.key, body: b.body }));
-        }
-        if (req.method === 'POST' && p === '/api/hammer') {
-          // 30 calls at once, as one customer: the demo's rate limit lets only some through.
-          const codes = await Promise.all(Array.from({ length: 30 }, () => call('list').then((r) => r.status).catch(() => 0)));
-          const served = codes.filter((c) => c === 200).length;
-          const limited = codes.filter((c) => c === 429).length;
-          return json(res, 200, { sent: codes.length, served, limited, other: codes.length - served - limited });
         }
         json(res, 404, { error: 'not found' });
       } catch (e) {

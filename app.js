@@ -25,9 +25,12 @@ try { lib = require('./lib/apiblaze-server.js'); } catch { /* run without the wi
 // The two pizzerias (tenants) and the people the demo lets you be. A real app takes
 // "who is this" from its own login.
 const PIZZERIAS = {
-  nino: { label: 'Nino Pizza', tenant: () => env('APIBLAZE_TENANT'), key: () => env('APIBLAZE_SERVER_KEY'), admin: { userId: 'ana', label: 'Ana', email: 'ana@ninopizza.example' } },
-  gino: { label: 'Gino Pizza', tenant: () => env('APIBLAZE_GINO_TENANT'), key: () => env('APIBLAZE_GINO_KEY'), admin: { userId: 'gina', label: 'Gina', email: 'gina@ginopizza.example' } },
+  nino: { label: 'Nino Pizza', tenant: () => env('APIBLAZE_TENANT', env('DEMO_NINO_TENANT')), key: () => env('APIBLAZE_SERVER_KEY'), admin: { userId: 'ana', label: 'Ana', email: 'ana@ninopizza.example' } },
+  gino: { label: 'Gino Pizza', tenant: () => env('APIBLAZE_GINO_TENANT', env('DEMO_GINO_TENANT')), key: () => env('APIBLAZE_GINO_KEY'), admin: { userId: 'gina', label: 'Gina', email: 'gina@ginopizza.example' } },
 };
+// Each pizzeria (tenant) has its own MCP address: https://{proxy}-{tenant}.mcp.…
+const portalFor = (tenant) => (env('APIBLAZE_PORTAL_URL') && env('APIBLAZE_TENANT') && tenant ? env('APIBLAZE_PORTAL_URL').replace(`${env('APIBLAZE_TENANT')}.portal`, `${tenant}.portal`) : '');
+const mcpFor = (tenant) => (env('APIBLAZE_MCP_URL') && env('APIBLAZE_TENANT') && tenant ? env('APIBLAZE_MCP_URL').replace(`-${env('APIBLAZE_TENANT')}.`, `-${tenant}.`) : '');
 const CUSTOMERS = { ana: 'Ana', ben: 'Ben' };
 const pizzeriaOf = (id) => PIZZERIAS[id] || PIZZERIAS.nino;
 function queryOf(req) { return new URL(req.url, 'http://x').searchParams; }
@@ -92,8 +95,9 @@ function widgets() {
   return out;
 }
 
-function startApp(port = Number(env('APP_PORT', '3000'))) {
-  const w = widgets();
+/** One of the two websites: `direct` = straight to the backend (unprotected), else through APIblaze. */
+function startApp(port = Number(env('APP_PORT', '3000')), { direct = false } = {}) {
+  const w = direct ? {} : widgets();
   const pub = path.join(__dirname, 'public');
   const server = http.createServer((req, res) => {
     let raw = '';
@@ -114,10 +118,12 @@ function startApp(port = Number(env('APP_PORT', '3000'))) {
         }
         if (p === '/api/config') {
           return json(res, 200, {
-            apiUrl: env('APIBLAZE_URL'), mcpUrl: env('APIBLAZE_MCP_URL'), portalUrl: env('APIBLAZE_PORTAL_URL'),
+            direct, apiUrl: env('APIBLAZE_URL'), portalUrl: env('APIBLAZE_PORTAL_URL'),
             backendPort: env('BACKEND_PORT', '3001'),
+            protectedUrl: env('APIBLAZE_URL') ? `http://localhost:${env('APP_PORT', '3000')}` : '',
+            directUrl: `http://localhost:${env('DIRECT_PORT', '3002')}`,
             logsCommand: `npx apiblaze@latest logs ${env('APIBLAZE_NAME')} --tenant ${env('APIBLAZE_TENANT')}`,
-            pizzerias: Object.entries(PIZZERIAS).filter(([, pz]) => pz.tenant()).map(([id, pz]) => ({ id, label: pz.label, admin: pz.admin.label })),
+            pizzerias: Object.entries(PIZZERIAS).filter(([, pz]) => pz.tenant()).map(([id, pz]) => ({ id, label: pz.label, admin: pz.admin.label, mcpUrl: mcpFor(pz.tenant()), portalUrl: portalFor(pz.tenant()) })),
             widgets: { chat: Object.keys(w.chat || {}), keys: !!w.keys, groups: !!w.groups },
           });
         }
@@ -129,7 +135,7 @@ function startApp(port = Number(env('APP_PORT', '3000'))) {
         if (p === '/api/apiblaze/groups' && w.groups) return viaHandler(w.groups.handler, req, res, raw);
         if (req.method === 'POST' && p === '/api/act') {
           const b = JSON.parse(raw || '{}');
-          return json(res, 200, await call(String(b.op || 'list'), { pizzeria: b.pizzeria, as: String(b.as || 'ana'), id: b.id, body: b.body, direct: !!b.direct }));
+          return json(res, 200, await call(String(b.op || 'list'), { pizzeria: b.pizzeria, as: String(b.as || 'ana'), id: b.id, body: b.body, direct }));
         }
         json(res, 404, { error: 'not found' });
       } catch (e) {

@@ -85,7 +85,8 @@
   </div>
   <div class="live" id="live-protected">
     <div>API <code id="api">…</code> <span class="arrow">— APIblaze tunnel →</span> <code id="local">localhost</code></div>
-    <div>MCP <code id="mcp">…</code> <span>for AI assistants</span></div>
+    <div>MCP <code id="mcp">…</code> <span>for AI assistants, at <span class="pz-name">Nino Pizza</span></span></div>
+    <div>Dev portal <a id="portal-top" target="_blank" rel="noopener"><code id="portal-url">…</code></a> <span>sign in, get a key, try the API</span></div>
   </div>
   <div class="live" id="live-direct" hidden>
     <div>Calling <code id="local2">localhost</code> directly with the backend secret. No API keys, no rules, no tenants checked.</div>
@@ -141,45 +142,52 @@
 const $ = (s) => document.querySelector(s);
 const W = window.ApiblazeWidgets;
 const theme = { accent: '#e4572e' };
-const state = { direct: false, pizzeria: 'nino', tab: 'app' };
+// Every switch (pizzeria, tab, person) is a fresh page load, the choice kept in the address:
+// ?pizzeria=gino&as=ben#admin. Nothing half-mounted is ever left behind.
+const params = new URLSearchParams(location.search);
+const state = { direct: false, pizzeria: params.get('pizzeria') || 'nino', tab: location.hash === '#admin' ? 'admin' : 'app' };
+function reloadWith(next) {
+  const p = new URLSearchParams({ pizzeria: next.pizzeria ?? state.pizzeria, as: next.as ?? $('#as').value });
+  location.href = `${location.pathname}?${p}${(next.tab ?? state.tab) === 'admin' ? '#admin' : ''}`;
+  if ((next.tab ?? state.tab) !== state.tab && !next.pizzeria && !next.as) location.reload(); // a hash-only change does not reload by itself
+}
 let cfg = null;
 const ready = fetch('/api/config').then((r) => r.json()).then((c) => { cfg = c; return c; });
 const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch(() => ({ status: 0 }));
-const act = (op, extra) => post('/api/act', { op, pizzeria: state.pizzeria, as: me(), direct: state.direct, ...extra });
+const act = (op, extra) => post('/api/act', { op, pizzeria: state.pizzeria, as: me(), ...extra });
 const me = () => $('#as').value;
 const pz = () => (cfg?.pizzerias || []).find((p) => p.id === state.pizzeria) || { label: 'Nino Pizza', admin: 'Ana' };
 const anaBooking = {};
 
-// ── mode, pizzeria, tab ──
+// ── mode (which site this is), pizzeria, tab ──
+// The two websites are two servers: the protected one through APIblaze and the unprotected one
+// straight to the backend. The switch at the top goes from one to the other.
 function setMode(direct) {
   state.direct = direct;
   $('#mode-protected').setAttribute('aria-pressed', !direct); $('#mode-direct').setAttribute('aria-pressed', direct);
   $('#live-protected').hidden = direct; $('#live-direct').hidden = !direct;
   $('#foot-protected').hidden = direct; $('#foot-direct').hidden = !direct;
-  $('#ben-out').replaceChildren();
-  render();
 }
-$('#mode-protected').onclick = () => setMode(false);
-$('#mode-direct').onclick = () => setMode(true);
+function goTo(url) { if (url) location.href = url + location.search + location.hash; }
+$('#mode-protected').onclick = () => { if (state.direct) goTo(cfg.protectedUrl); };
+$('#mode-direct').onclick = () => { if (!state.direct) goTo(cfg.directUrl); };
 function setTab(tab) {
   state.tab = tab;
   $('#app').hidden = tab !== 'app'; $('#admin').hidden = tab !== 'admin';
   $('#tab-app').setAttribute('aria-pressed', tab === 'app'); $('#tab-admin').setAttribute('aria-pressed', tab === 'admin');
-  render();
 }
-$('#tab-app').onclick = () => setTab('app');
-$('#tab-admin').onclick = () => setTab('admin');
-$('#go-admin').onclick = () => setTab('admin');
-function setPizzeria(id) {
-  state.pizzeria = id;
-  document.querySelectorAll('#pizzerias button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.id === id));
-  $('#ben-out').replaceChildren();
-  render();
-}
+$('#tab-app').onclick = () => { if (state.tab !== 'app') reloadWith({ tab: 'app' }); };
+$('#tab-admin').onclick = () => { if (state.tab !== 'admin') reloadWith({ tab: 'admin' }); };
+$('#go-admin').onclick = () => reloadWith({ tab: 'admin' });
+function setPizzeria(id) { if (id !== state.pizzeria) reloadWith({ pizzeria: id }); }
 
 async function render() {
   await ready;
   document.querySelectorAll('.pz-name').forEach((e) => { e.textContent = pz().label; });
+  // Each pizzeria (tenant) has its own MCP address and developer portal.
+  $('#mcp').textContent = pz().mcpUrl || cfg.mcpUrl || 'not connected';
+  $('#portal-url').textContent = pz().portalUrl || 'not connected';
+  if (pz().portalUrl) { $('#portal-top').href = pz().portalUrl; $('#portal').href = pz().portalUrl; }
   if (state.tab === 'app') { await refresh(); mountChat(); } else mountAdmin();
 }
 
@@ -210,14 +218,15 @@ $('#book').onclick = async () => {
   refresh();
 };
 $('#ben-cancel').onclick = async () => {
-  const r = await post('/api/act', { op: 'cancel', pizzeria: state.pizzeria, as: 'ben', id: anaBooking[state.pizzeria], direct: state.direct });
+  const r = await post('/api/act', { op: 'cancel', pizzeria: state.pizzeria, as: 'ben', id: anaBooking[state.pizzeria] });
   const d = document.createElement('div');
   if (r.status === 403) { d.className = 'out good'; d.textContent = "🛡 Blocked. Only Ana can cancel Ana's booking. APIblaze decided, not the app's code."; }
   else if (r.status === 204) { d.className = 'out bad'; d.textContent = "Cancelled. Straight to localhost, nothing stopped Ben."; anaBooking[state.pizzeria] = null; }
   else { d.className = 'out bad'; d.textContent = 'Something went wrong (HTTP ' + r.status + ').'; }
   $('#ben-out').replaceChildren(d);
 };
-$('#as').onchange = () => { $('#ben-out').replaceChildren(); render(); };
+$('#as').onchange = () => reloadWith({ as: $('#as').value });
+if (params.get('as')) $('#as').value = params.get('as');
 setInterval(() => { if (state.tab === 'app') refresh(); }, 2000); // the assistant's bookings appear here
 
 // ── chat ──
@@ -246,12 +255,13 @@ function mountAdmin() {
   adminKey = state.pizzeria;
   for (const id of ['#keys', '#groups']) $(id).replaceChildren();
   if (cfg.widgets.keys) W.keys('#keys', { endpoint: '/api/apiblaze/keys?pizzeria=' + state.pizzeria, theme, title: `API keys · ${pz().label}` });
-  if (cfg.widgets.groups) W.groups('#groups', { endpoint: '/api/apiblaze/groups?pizzeria=' + state.pizzeria, theme, title: `People and groups · ${pz().label}` });
+  if (cfg.widgets.groups) W.groups('#groups', { endpoint: '/api/apiblaze/groups?pizzeria=' + state.pizzeria, theme, title: `People and groups · ${pz().label}`, defaultOpenAdmins: true });
 }
 
 ready.then((c) => {
   $('#api').textContent = c.apiUrl || 'not connected';
-  $('#mcp').textContent = c.mcpUrl || 'not connected';
+  setMode(!!c.direct);
+  if (c.direct && !c.protectedUrl) { $('#mode-protected').disabled = true; $('#mode-protected').querySelector('small').textContent = 'starts once APIblaze is set up'; }
   $('#local').textContent = $('#local2').textContent = 'localhost:' + c.backendPort;
   document.querySelectorAll('.local3').forEach((e) => { e.textContent = 'localhost:' + c.backendPort; });
   if (c.logsCommand) $('#logs-cmd').textContent = c.logsCommand;
@@ -261,9 +271,9 @@ ready.then((c) => {
     b.setAttribute('aria-pressed', p.id === state.pizzeria); b.onclick = () => setPizzeria(p.id);
     $('#pizzerias').append(b);
   }
-  if (!c.widgets.keys && !c.widgets.groups) $('#tab-admin').hidden = true;
-  if (new URLSearchParams(location.search).get('mode') === 'direct') setMode(true);
-  setTab(location.hash === '#admin' ? 'admin' : 'app');
+  if (!c.direct && !c.widgets.keys && !c.widgets.groups) $('#tab-admin').hidden = true;
+  setTab(state.tab);
+  render();
 });
 </script>
 </body>

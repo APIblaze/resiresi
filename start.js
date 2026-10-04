@@ -1,4 +1,5 @@
-// Starts the pizzeria on this laptop: the backend (port 3001) and the website (port 3000).
+// Starts the pizzeria on this laptop: the backend (3001), the unprotected front-end straight to it
+// (3002) and, once APIblaze is set up, the protected website through APIblaze (3000).
 // No APIblaze involved here — the tunnel is `npx apiblaze@latest demo start|stop|restart`.
 //
 //   node start.js        run in the foreground (Ctrl-C stops)
@@ -26,9 +27,13 @@ async function start() {
   const { startApp } = require('./app');
   const backendPort = Number(process.env.BACKEND_PORT) || 3001;
   const appPort = Number(process.env.APP_PORT) || 3000;
+  const directPort = Number(process.env.DIRECT_PORT) || 3002;
   await startBackend(backendPort);
-  await startApp(appPort);
-  return { backendPort, appPort };
+  // The unprotected front-end: straight to the backend, no APIblaze.
+  await startApp(directPort, { direct: true });
+  // The protected website: through APIblaze (once the demo has written its keys).
+  if (process.env.APIBLAZE_URL) await startApp(appPort);
+  return { backendPort, appPort, directPort };
 }
 
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
@@ -51,7 +56,7 @@ function background() {
   child.unref();
   fs.writeFileSync(PID, String(child.pid));
   loadEnv();
-  console.log(`Started the pizzeria: website http://localhost:${process.env.APP_PORT || 3000}, backend localhost:${process.env.BACKEND_PORT || 3001}.`);
+  console.log(`Started the pizzeria: backend localhost:${process.env.BACKEND_PORT || 3001}, unprotected front-end http://localhost:${process.env.DIRECT_PORT || 3002}${process.env.APIBLAZE_URL ? `, protected website http://localhost:${process.env.APP_PORT || 3000}` : ''}.`);
 }
 
 module.exports = { start, loadEnv };
@@ -61,7 +66,7 @@ if (require.main === module) {
   else if (arg === '--background') background();
   else if (arg === '--restart') stop().then(() => setTimeout(background, 300));
   else {
-    start().then(({ appPort, backendPort }) => console.log(`Pizzeria running: website http://localhost:${appPort}, backend localhost:${backendPort}. Ctrl-C stops.`))
+    start().then(({ appPort, backendPort, directPort }) => console.log(`Pizzeria running: backend localhost:${backendPort}, unprotected front-end http://localhost:${directPort}${process.env.APIBLAZE_URL ? `, protected website http://localhost:${appPort}` : ''}. Ctrl-C stops.`))
       .catch((e) => { console.error(`Could not start: ${e.message}`); process.exit(1); });
   }
 }

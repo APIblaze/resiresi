@@ -207,6 +207,13 @@ async function refresh() {
   const r = await act('list');
   const rows = Array.isArray(r.body) ? r.body : [];
   if (me() === 'ana') anaBooking[state.pizzeria] = rows.length ? rows[0].id : null;
+  // Signed in as Ben, the page has just reloaded (every switch does), so it asks for Ana's
+  // latest booking to offer the "Can Ben cancel it?" check.
+  if (me() === 'ben') {
+    const a = await act('list', { as: 'ana' });
+    const anaRows = Array.isArray(a.body) ? a.body : [];
+    anaBooking[state.pizzeria] = anaRows.length ? anaRows[0].id : null;
+  }
   const ul = $('#list'); ul.replaceChildren();
   if (r.status === 402) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'This demo has used its free requests. For a fresh one, run: npx apiblaze@latest demo'; ul.append(li); }
   else if (r.status && r.status !== 200) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Could not load reservations (HTTP ' + r.status + ').'; ul.append(li); }

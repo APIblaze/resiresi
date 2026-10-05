@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nino's Pizza demo</title>
+<title>ResiResi demo</title>
 <style>
   :root {
     --bg: #faf7f2; --card: #fff; --ink: #1d1b19; --muted: #6b6560; --line: #e8e2d9; --soft: #f3eee6;
@@ -71,25 +71,27 @@
   .next a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 600; }
   .next code { font-family: var(--mono); font-size: 13px; }
   .stack { display: grid; gap: 16px; }
+  button.copy { font-size: 11.5px; padding: 1px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; vertical-align: 1px; }
+  button.copy:hover { border-color: var(--muted); }
 </style>
 </head>
 <body>
 <main>
   <div class="mode" role="group" aria-label="How the website reaches the backend">
     <button class="protected" id="mode-protected" aria-pressed="true">
-      <img src="/apiblaze-logo.svg" alt="APIblaze"><span><b>Protected and enhanced by APIblaze</b><small>keys, rules, tenants, AI tools</small></span>
+      <img src="/apiblaze-logo.svg" alt="APIblaze"><span><b>Protected and enhanced by APIblaze</b><small>on the internet, AI-ready (MCP), keys, sign-in, tenants, rules, limits</small></span>
     </button>
     <button class="direct" id="mode-direct" aria-pressed="false">
-      <span class="icon">⚠</span><span><b>Direct to localhost, unprotected</b><small>no APIblaze: anyone can do anything</small></span>
+      <span class="icon">⚠</span><span><b>Direct to localhost, unprotected</b><small>this laptop only: no public address, no AI access, no keys, no rules</small></span>
     </button>
   </div>
   <div class="live" id="live-protected">
-    <div>API <code id="api">…</code> <span class="arrow">— APIblaze tunnel →</span> <code id="local">localhost</code></div>
-    <div>MCP <code id="mcp">…</code> <span>for AI assistants, at <span class="pz-name">Nino Pizza</span></span></div>
-    <div>Dev portal <a id="portal-top" target="_blank" rel="noopener"><code id="portal-url">…</code></a> <span>sign in, get a key, try the API</span></div>
+    <div>API <code id="api">…</code> <button class="copy" data-copy="#api">Copy</button> <span class="arrow">— APIblaze tunnel →</span> <code id="local">localhost</code></div>
+    <div>MCP <code id="mcp">…</code> <button class="copy" data-copy="#mcp">Copy</button> <span>for AI assistants, at <span class="pz-name">Nino Pizza</span></span></div>
+    <div>Dev portal <a id="portal-top" target="_blank" rel="noopener"><code id="portal-url">…</code></a> <button class="copy" data-copy="#portal-url">Copy</button> <span>sign in, get a key, try the API</span></div>
   </div>
   <div class="live" id="live-direct" hidden>
-    <div>Calling <code id="local2">localhost</code> directly with the backend secret. No API keys, no rules, no tenants checked.</div>
+    <div>Calling <code id="local2">localhost</code> <button class="copy" data-copy="#local2">Copy</button> directly with the backend secret. Only this laptop can reach it: no public address, no MCP for AI assistants, no API keys or sign-in, no tenants, rules or limits.</div>
   </div>
 
   <div class="bar">
@@ -123,7 +125,7 @@
       </div>
       <div class="card chatcard"><div id="chat"></div><div class="note" id="chat-off" hidden>The assistant only reaches your app through APIblaze (its MCP address). Switch back to <b>Protected</b> to chat.</div></div>
     </div>
-    <p class="next"><span id="foot-protected">Every request here reaches your laptop through APIblaze: <code id="logs-cmd">npx apiblaze@latest logs</code> shows them live.</span><span id="foot-direct" hidden>Every request here goes straight to <code class="local3">localhost</code>, skipping APIblaze: nothing checks who is asking.</span> Next: <a id="go-admin">the admin side →</a></p>
+    <p class="next"><span id="foot-protected">Every request here reaches your laptop through APIblaze: <code id="logs-cmd">npx apiblaze@latest logs</code> shows them live.</span><span id="foot-direct" hidden>Every request here goes straight to <code class="local3">localhost</code>: nobody outside this laptop can reach it, AI assistants cannot use it, and nothing checks who is asking.</span> Next: <a id="go-admin">the admin side →</a></p>
   </section>
 
   <!-- ADMIN: what each pizzeria's admin sees -->
@@ -145,11 +147,10 @@ const theme = { accent: '#e4572e' };
 // Every switch (pizzeria, tab, person) is a fresh page load, the choice kept in the address:
 // ?pizzeria=gino&as=ben#admin. Nothing half-mounted is ever left behind.
 const params = new URLSearchParams(location.search);
-const state = { direct: false, pizzeria: params.get('pizzeria') || 'nino', tab: location.hash === '#admin' ? 'admin' : 'app' };
+const state = { direct: false, pizzeria: params.get('pizzeria') || 'nino', tab: (params.get('tab') || (location.hash === '#admin' ? 'admin' : 'app')) === 'admin' ? 'admin' : 'app' };
 function reloadWith(next) {
-  const p = new URLSearchParams({ pizzeria: next.pizzeria ?? state.pizzeria, as: next.as ?? $('#as').value });
-  location.href = `${location.pathname}?${p}${(next.tab ?? state.tab) === 'admin' ? '#admin' : ''}`;
-  if ((next.tab ?? state.tab) !== state.tab && !next.pizzeria && !next.as) location.reload(); // a hash-only change does not reload by itself
+  const p = new URLSearchParams({ pizzeria: next.pizzeria ?? state.pizzeria, as: next.as ?? $('#as').value, tab: next.tab ?? state.tab });
+  location.assign(`${location.pathname}?${p}`);
 }
 let cfg = null;
 const ready = fetch('/api/config').then((r) => r.json()).then((c) => { cfg = c; return c; });
@@ -158,6 +159,15 @@ const act = (op, extra) => post('/api/act', { op, pizzeria: state.pizzeria, as: 
 const me = () => $('#as').value;
 const pz = () => (cfg?.pizzerias || []).find((p) => p.id === state.pizzeria) || { label: 'Nino Pizza', admin: 'Ana' };
 const anaBooking = {};
+
+// Copy buttons: every address on the page.
+document.querySelectorAll('button.copy').forEach((b) => b.onclick = async () => {
+  const el = $(b.dataset.copy);
+  const text = (el.textContent || '').trim().replace(/^localhost/, 'http://localhost');
+  try { await navigator.clipboard.writeText(text); }
+  catch { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand('copy'); sel.removeAllRanges(); }
+  b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200);
+});
 
 // ── mode (which site this is), pizzeria, tab ──
 // The two websites are two servers: the protected one through APIblaze and the unprotected one
@@ -168,7 +178,7 @@ function setMode(direct) {
   $('#live-protected').hidden = direct; $('#live-direct').hidden = !direct;
   $('#foot-protected').hidden = direct; $('#foot-direct').hidden = !direct;
 }
-function goTo(url) { if (url) location.href = url + location.search + location.hash; }
+function goTo(url) { if (url) location.assign(url + location.search); }
 $('#mode-protected').onclick = () => { if (state.direct) goTo(cfg.protectedUrl); };
 $('#mode-direct').onclick = () => { if (!state.direct) goTo(cfg.directUrl); };
 function setTab(tab) {
@@ -198,7 +208,8 @@ async function refresh() {
   const rows = Array.isArray(r.body) ? r.body : [];
   if (me() === 'ana') anaBooking[state.pizzeria] = rows.length ? rows[0].id : null;
   const ul = $('#list'); ul.replaceChildren();
-  if (r.status && r.status !== 200) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Could not load reservations (HTTP ' + r.status + ').'; ul.append(li); }
+  if (r.status === 402) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'This demo has used its free requests. For a fresh one, run: npx apiblaze@latest demo'; ul.append(li); }
+  else if (r.status && r.status !== 200) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Could not load reservations (HTTP ' + r.status + ').'; ul.append(li); }
   else if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No reservations yet.'; ul.append(li); }
   for (const b of rows) {
     const li = document.createElement('li');
@@ -214,7 +225,7 @@ async function refresh() {
 $('#book').onclick = async () => {
   const guests = Math.max(1, Number($('#guests').value) || 2);
   const time = $('#time').value || '19:30';
-  await act('book', { body: { guests, time, table: 4 } });
+  await act('book', { body: { guests, time } }); // the restaurant picks the table
   refresh();
 };
 $('#ben-cancel').onclick = async () => {
@@ -227,7 +238,16 @@ $('#ben-cancel').onclick = async () => {
 };
 $('#as').onchange = () => reloadWith({ as: $('#as').value });
 if (params.get('as')) $('#as').value = params.get('as');
-setInterval(() => { if (state.tab === 'app') refresh(); }, 2000); // the assistant's bookings appear here
+// The assistant's bookings appear here. Every 2 s the page asks this laptop (free) whether a
+// booking changed, and re-lists through APIblaze only when one did: an idle page spends nothing.
+let lastChange = null;
+setInterval(async () => {
+  if (state.tab !== 'app' || document.hidden) return;
+  const c = await fetch('/api/changes').then((x) => x.json()).catch(() => null);
+  if (!c) return;
+  if (lastChange !== null && c.n !== lastChange) refresh();
+  lastChange = c.n;
+}, 2000);
 
 // ── chat ──
 let chatKey = '';

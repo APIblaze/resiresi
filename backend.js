@@ -1,4 +1,5 @@
-// Nino's Pizza backend: book, list and cancel tables. It runs on YOUR laptop.
+// ResiResi backend: restaurants (tenants, like Nino Pizza and Gino Pizza) let their customers
+// book, list and cancel tables. It runs on YOUR laptop.
 //
 // `npx apiblaze@latest dev` (which the demo runs for you) puts it on the internet
 // at a public URL and gives AI assistants an MCP address for it. Everything else
@@ -20,6 +21,9 @@ const path = require('path');
 
 const bookings = new Map();
 let next = 1;
+// Bumps on every booking made or cancelled. The page asks the app (on this laptop, free)
+// whether it moved before re-listing through APIblaze, so an open, idle page spends nothing.
+let changes = 0;
 // The last requests this laptop answered — the demo page shows them live.
 const recent = [];
 function remember(entry) {
@@ -28,6 +32,14 @@ function remember(entry) {
   // One line per request in the terminal (`npx apiblaze@latest demo logs` follows it).
   const who = entry.who ? `${entry.who}${entry.tenant ? ` @ ${entry.tenant}` : ''}` : '-';
   console.log(`${new Date().toISOString().slice(11, 19)}  ${entry.status}  ${entry.method.padEnd(6)} ${entry.path.padEnd(22)} ${who}`);
+}
+
+// The restaurant picks the table: the lowest one still free at that time, at that restaurant.
+function freeTable(tenant, time) {
+  const taken = new Set([...bookings.values()].filter((r) => r.tenant === tenant && r.time === time).map((r) => r.table));
+  let t = 1;
+  while (taken.has(t)) t++;
+  return t;
 }
 
 function send(res, status, body) {
@@ -55,11 +67,12 @@ function handle(req, res, body) {
   if (!id && req.method === 'POST') {
     let input = {};
     try { input = JSON.parse(body || '{}'); } catch { return reply(400, { error: 'body must be JSON' }); }
+    const time = String(input.time || '19:30');
     const row = {
-      id: `r${next++}`, name: String(input.name || who), table: Number(input.table) || 1,
-      time: String(input.time || '19:30'), guests: Number(input.guests) || 2, owner: who, tenant,
+      id: `r${next++}`, name: String(input.name || who), table: Number(input.table) || freeTable(tenant, time),
+      time, guests: Number(input.guests) || 2, owner: who, tenant,
     };
-    bookings.set(row.id, row);
+    bookings.set(row.id, row); changes++;
     return reply(201, row);
   }
   if (!id && req.method === 'GET') {
@@ -69,7 +82,7 @@ function handle(req, res, body) {
   const row = bookings.get(id);
   if (!row) return reply(404, { error: 'no such booking' });
   if (req.method === 'GET') return reply(200, row);
-  if (req.method === 'DELETE') { bookings.delete(id); return reply(204); }
+  if (req.method === 'DELETE') { bookings.delete(id); changes++; return reply(204); }
   return reply(405, { error: 'method not allowed' });
 }
 
@@ -87,5 +100,5 @@ function startBackend(port = Number(process.env.BACKEND_PORT) || 3001) {
   });
 }
 
-module.exports = { startBackend, recent };
+module.exports = { startBackend, recent, changeCount: () => changes };
 if (require.main === module) startBackend().then(() => console.log('backend on http://localhost:3001'));

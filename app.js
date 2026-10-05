@@ -1,4 +1,4 @@
-// Nino's Pizza website server: serves the page and makes its calls.
+// ResiResi website server: serves the page and makes its calls.
 //
 // PROTECTED (the default): every call goes to the PUBLIC API — through APIblaze — with the
 // pizzeria's server key (kept here, never in the browser) and X-End-User-Id naming the
@@ -126,6 +126,13 @@ function startApp(port = Number(env('APP_PORT', '3000')), { direct = false } = {
             pizzerias: Object.entries(PIZZERIAS).filter(([, pz]) => pz.tenant()).map(([id, pz]) => ({ id, label: pz.label, admin: pz.admin.label, mcpUrl: mcpFor(pz.tenant()), portalUrl: portalFor(pz.tenant()) })),
             widgets: { chat: Object.keys(w.chat || {}), keys: !!w.keys, groups: !!w.groups },
           });
+        }
+        if (p === '/api/changes') {
+          // Local and free: has any booking changed since the page last listed? The page
+          // re-lists through APIblaze only when it has (the backend runs in this process).
+          let n = 0;
+          try { n = require('./backend').changeCount(); } catch { /* backend runs elsewhere */ }
+          return json(res, 200, { n });
         }
         if (p === '/api/apiblaze/chat') {
           const h = (w.chat || {})[url.searchParams.get('pizzeria') || 'nino'];

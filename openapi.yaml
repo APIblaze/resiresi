@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Nino's Pizza API
+  title: ResiResi API
   version: 1.0.0
-  description: Table bookings at Nino's Pizza. APIblaze reads this file to build the MCP tools for AI assistants and to work out who may change what.
+  description: Table bookings at restaurants (each restaurant is a tenant, like Nino Pizza and Gino Pizza). APIblaze reads this file to build the MCP tools for AI assistants and to work out who may change what.
 paths:
   /reservations:
     get:
@@ -19,6 +19,7 @@ paths:
     post:
       operationId: createReservation
       summary: Book a table
+      description: Only the time is needed. The restaurant picks a free table and books it in the signed-in person's name, so never ask for a table number or a name.
       requestBody:
         required: true
         content:
@@ -51,12 +52,12 @@ components:
   schemas:
     NewReservation:
       type: object
-      required: [table, time]
+      required: [time]
       properties:
         name: { type: string, example: Ana, description: 'Optional: defaults to the signed-in person. Do not ask for it.' }
-        table: { type: integer, example: 4 }
+        table: { type: integer, example: 4, description: 'Optional: the restaurant picks a free table. Do not ask for it.' }
         time: { type: string, example: '19:30', description: 'Time of the booking, 24h HH:MM' }
-        guests: { type: integer, example: 2, description: 'How many people' }
+        guests: { type: integer, example: 2, description: 'How many people. Optional, 2 if not given.' }
     Reservation:
       allOf:
         - $ref: '#/components/schemas/NewReservation'

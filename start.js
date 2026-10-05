@@ -1,4 +1,4 @@
-// Starts the pizzeria on this laptop: the backend (3001), the unprotected front-end straight to it
+// Starts ResiResi on this laptop: the backend (3001), the unprotected front-end straight to it
 // (3002) and, once APIblaze is set up, the protected website through APIblaze (3000).
 // No APIblaze involved here — the tunnel is `npx apiblaze@latest demo start|stop|restart`.
 //
@@ -42,21 +42,21 @@ function runningPid() {
 }
 async function stop() {
   const pid = runningPid();
-  if (!pid) { console.log('The pizzeria is not running.'); return; }
+  if (!pid) { console.log('ResiResi is not running.'); return; }
   process.kill(pid, 'SIGTERM');
   for (let i = 0; i < 30 && alive(pid); i++) await new Promise((r) => setTimeout(r, 100));
   try { fs.unlinkSync(PID); } catch { /* gone */ }
-  console.log('Stopped the pizzeria (backend and website).');
+  console.log('Stopped ResiResi (backend and websites).');
 }
 function background() {
-  if (runningPid()) { console.log('The pizzeria is already running.'); return; }
+  if (runningPid()) { console.log('ResiResi is already running.'); return; }
   fs.mkdirSync(path.dirname(PID), { recursive: true });
   const log = fs.openSync(path.join(__dirname, '.demo', 'app.log'), 'a');
   const child = spawn(process.execPath, [__filename], { cwd: __dirname, detached: true, stdio: ['ignore', log, log] });
   child.unref();
   fs.writeFileSync(PID, String(child.pid));
   loadEnv();
-  console.log(`Started the pizzeria: backend localhost:${process.env.BACKEND_PORT || 3001}, unprotected front-end http://localhost:${process.env.DIRECT_PORT || 3002}${process.env.APIBLAZE_URL ? `, protected website http://localhost:${process.env.APP_PORT || 3000}` : ''}.`);
+  console.log(`Started ResiResi: backend localhost:${process.env.BACKEND_PORT || 3001}, unprotected front-end http://localhost:${process.env.DIRECT_PORT || 3002}${process.env.APIBLAZE_URL ? `, protected website http://localhost:${process.env.APP_PORT || 3000}` : ''}.`);
 }
 
 module.exports = { start, loadEnv };
@@ -66,7 +66,7 @@ if (require.main === module) {
   else if (arg === '--background') background();
   else if (arg === '--restart') stop().then(() => setTimeout(background, 300));
   else {
-    start().then(({ appPort, backendPort, directPort }) => console.log(`Pizzeria running: backend localhost:${backendPort}, unprotected front-end http://localhost:${directPort}${process.env.APIBLAZE_URL ? `, protected website http://localhost:${appPort}` : ''}. Ctrl-C stops.`))
+    start().then(({ appPort, backendPort, directPort }) => console.log(`ResiResi running: backend localhost:${backendPort}, unprotected front-end http://localhost:${directPort}${process.env.APIBLAZE_URL ? `, protected website http://localhost:${appPort}` : ''}. Ctrl-C stops.`))
       .catch((e) => { console.error(`Could not start: ${e.message}`); process.exit(1); });
   }
 }

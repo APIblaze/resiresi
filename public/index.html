@@ -113,6 +113,7 @@
         <p class="sub">Book here, or ask the assistant. Each person only sees their own.</p>
         <div class="form">
           <label><input type="number" id="guests" min="1" max="20" value="2"> people</label>
+          <label>on <input type="date" id="date"></label>
           <label>at <input type="time" id="time" value="19:30"></label>
           <button class="act primary" id="book">Book a table</button>
         </div>
@@ -142,6 +143,16 @@
 <script src="/apiblaze-widgets.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
+// Days as the backend writes them (YYYY-MM-DD), on this laptop's clock; shown as today / tomorrow / Thu, Oct 9.
+const localDay = (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const dayLabel = (day) => {
+  if (!day || day === localDay()) return 'today';
+  if (day === localDay(1)) return 'tomorrow';
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+};
+// The form books today unless they pick another day (and never a day already gone).
+$('#date').value = $('#date').min = localDay();
 const W = window.ApiblazeWidgets;
 const theme = { accent: '#e4572e' };
 // Every switch (pizzeria, tab, person) is a fresh page load, the choice kept in the address:
@@ -222,7 +233,7 @@ async function refresh() {
     const li = document.createElement('li');
     if (!seen.has(b.id)) { li.className = 'new'; seen.add(b.id); }
     const t = document.createElement('span');
-    t.textContent = `${b.guests || 2} people · ${b.time} · table ${b.table} · #${b.id}`;
+    t.textContent = `${b.guests || 2} people · ${dayLabel(b.date)} ${b.time} · table ${b.table} · #${b.id}`;
     const x = document.createElement('button'); x.className = 'act'; x.textContent = 'Cancel';
     x.onclick = async () => { await act('cancel', { id: b.id }); refresh(); };
     li.append(t, x); ul.append(li);
@@ -231,8 +242,9 @@ async function refresh() {
 }
 $('#book').onclick = async () => {
   const guests = Math.max(1, Number($('#guests').value) || 2);
+  const date = $('#date').value || localDay();
   const time = $('#time').value || '19:30';
-  await act('book', { body: { guests, time } }); // the restaurant picks the table
+  await act('book', { body: { guests, date, time } }); // the restaurant picks the table
   refresh();
 };
 $('#ben-cancel').onclick = async () => {
@@ -269,7 +281,7 @@ function mountChat() {
   W.chat('#chat', { endpoint: `/api/apiblaze/chat?pizzeria=${state.pizzeria}&as=${me()}`, mode: 'inline', title: `${pz().label} assistant`, avatar: '🍕', height: 520, theme,
     storageKey: 'pizza-chat-' + key,
     welcome: `Hi ${who}! I can book, list and cancel your tables at ${pz().label}. I'm using the app on your laptop, through APIblaze.`,
-    suggestions: ['Book a table for 4 people at 8pm', 'What are my reservations?'] });
+    suggestions: ['Book a table for 4 people tomorrow at 8pm', 'What are my reservations?'] });
 }
 
 // ── admin ──

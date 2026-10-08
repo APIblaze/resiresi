@@ -34,9 +34,22 @@ function remember(entry) {
   console.log(`${new Date().toISOString().slice(11, 19)}  ${entry.status}  ${entry.method.padEnd(6)} ${entry.path.padEnd(22)} ${who}`);
 }
 
-// The restaurant picks the table: the lowest one still free at that time, at that restaurant.
-function freeTable(tenant, time) {
-  const taken = new Set([...bookings.values()].filter((r) => r.tenant === tenant && r.time === time).map((r) => r.table));
+// The restaurant's day, YYYY-MM-DD, on this laptop's clock: a booking without a date is for today.
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// A real calendar day written YYYY-MM-DD (2026-02-30 is not one).
+function isDay(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
+
+// The restaurant picks the table: the lowest one still free that day at that time, at that restaurant.
+function freeTable(tenant, date, time) {
+  const taken = new Set([...bookings.values()].filter((r) => r.tenant === tenant && r.date === date && r.time === time).map((r) => r.table));
   let t = 1;
   while (taken.has(t)) t++;
   return t;
@@ -67,17 +80,20 @@ function handle(req, res, body) {
   if (!id && req.method === 'POST') {
     let input = {};
     try { input = JSON.parse(body || '{}'); } catch { return reply(400, { error: 'body must be JSON' }); }
+    const date = input.date ? String(input.date) : today();
+    if (!isDay(date)) return reply(400, { error: 'date must be a day, YYYY-MM-DD' });
     const time = String(input.time || '19:30');
     const row = {
-      id: `r${next++}`, name: String(input.name || who), table: Number(input.table) || freeTable(tenant, time),
-      time, guests: Number(input.guests) || 2, owner: who, tenant,
+      id: `r${next++}`, name: String(input.name || who), table: Number(input.table) || freeTable(tenant, date, time),
+      date, time, guests: Number(input.guests) || 2, owner: who, tenant,
     };
     bookings.set(row.id, row); changes++;
     return reply(201, row);
   }
   if (!id && req.method === 'GET') {
     // Lists are the backend's job: each person sees their own bookings, at their own pizzeria.
-    return reply(200, [...bookings.values()].filter((r) => r.owner === who && r.tenant === tenant));
+    return reply(200, [...bookings.values()].filter((r) => r.owner === who && r.tenant === tenant)
+      .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)));
   }
   const row = bookings.get(id);
   if (!row) return reply(404, { error: 'no such booking' });
@@ -85,11 +101,14 @@ function handle(req, res, body) {
   if (req.method === 'PATCH') {
     let input = {};
     try { input = JSON.parse(body || '{}'); } catch { return reply(400, { error: 'body must be JSON' }); }
+    const date = input.date ? String(input.date) : row.date;
+    if (!isDay(date)) return reply(400, { error: 'date must be a day, YYYY-MM-DD' });
     const time = input.time ? String(input.time) : row.time;
-    const table = input.table ? Number(input.table) : (time === row.time ? row.table : freeTable(row.tenant, time));
-    const clash = [...bookings.values()].find((r) => r.id !== row.id && r.tenant === row.tenant && r.time === time && r.table === table);
-    if (clash) return reply(409, { error: `table ${table} is already booked at ${time}` });
-    Object.assign(row, { time, table, ...(input.guests ? { guests: Number(input.guests) } : {}) }); changes++;
+    const moved = date !== row.date || time !== row.time;
+    const table = input.table ? Number(input.table) : (moved ? freeTable(row.tenant, date, time) : row.table);
+    const clash = [...bookings.values()].find((r) => r.id !== row.id && r.tenant === row.tenant && r.date === date && r.time === time && r.table === table);
+    if (clash) return reply(409, { error: `table ${table} is already booked on ${date} at ${time}` });
+    Object.assign(row, { date, time, table, ...(input.guests ? { guests: Number(input.guests) } : {}) }); changes++;
     return reply(200, row);
   }
   if (req.method === 'DELETE') { bookings.delete(id); changes++; return reply(204); }

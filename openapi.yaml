@@ -8,6 +8,7 @@ paths:
     get:
       operationId: listReservations
       summary: List my bookings
+      description: The signed-in person's own bookings at this restaurant, and nobody else's. Use it for "my bookings" or "the one I just made", and call it again whenever asked, since bookings change.
       responses:
         '200':
           description: The caller's bookings
@@ -37,15 +38,33 @@ paths:
     get:
       operationId: getReservation
       summary: Get one booking
+      description: Only the person who booked it (or the restaurant's admin) can see it. Anyone else is refused.
       responses:
         '200':
           description: The booking
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Reservation' }
+    patch:
+      operationId: updateReservation
+      summary: Change a booking
+      description: Move a booking to another table or time, or change the number of guests. Only the person who booked it (or the restaurant's admin) can change it. Get the id from listReservations; never ask for it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReservationChange' }
+      responses:
+        '200':
+          description: Changed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reservation' }
+        '409': { description: That table is already booked at that time }
     delete:
       operationId: cancelReservation
       summary: Cancel a booking
+      description: Only the person who booked it (or the restaurant's admin) can cancel it.
       responses:
         '204': { description: Cancelled }
 components:
@@ -58,6 +77,12 @@ components:
         table: { type: integer, example: 4, description: 'Optional: the restaurant picks a free table. Do not ask for it.' }
         time: { type: string, example: '19:30', description: 'Time of the booking, 24h HH:MM' }
         guests: { type: integer, example: 2, description: 'How many people. Optional, 2 if not given.' }
+    ReservationChange:
+      type: object
+      properties:
+        table: { type: integer, example: 2, description: 'Move to this table.' }
+        time: { type: string, example: '20:00', description: 'New time, 24h HH:MM' }
+        guests: { type: integer, example: 4, description: 'New number of people' }
     Reservation:
       allOf:
         - $ref: '#/components/schemas/NewReservation'

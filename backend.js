@@ -82,6 +82,16 @@ function handle(req, res, body) {
   const row = bookings.get(id);
   if (!row) return reply(404, { error: 'no such booking' });
   if (req.method === 'GET') return reply(200, row);
+  if (req.method === 'PATCH') {
+    let input = {};
+    try { input = JSON.parse(body || '{}'); } catch { return reply(400, { error: 'body must be JSON' }); }
+    const time = input.time ? String(input.time) : row.time;
+    const table = input.table ? Number(input.table) : (time === row.time ? row.table : freeTable(row.tenant, time));
+    const clash = [...bookings.values()].find((r) => r.id !== row.id && r.tenant === row.tenant && r.time === time && r.table === table);
+    if (clash) return reply(409, { error: `table ${table} is already booked at ${time}` });
+    Object.assign(row, { time, table, ...(input.guests ? { guests: Number(input.guests) } : {}) }); changes++;
+    return reply(200, row);
+  }
   if (req.method === 'DELETE') { bookings.delete(id); changes++; return reply(204); }
   return reply(405, { error: 'method not allowed' });
 }

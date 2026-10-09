@@ -21,6 +21,11 @@ const path = require('path');
 
 const bookings = new Map();
 let next = 1;
+// The people the demo provisioned up front, per pizzeria: { tenant: { handle: stable id } }.
+// Through APIblaze every call already names the stable id (x-abz-user-id); a call straight
+// to this port still says "ana", and must mean the same person.
+const USER_IDS = (() => { try { return JSON.parse(process.env.DEMO_USER_IDS || '{}'); } catch { return {}; } })();
+const idOf = (tenant, handle) => (USER_IDS[tenant] || {})[handle] || handle;
 // Bumps on every booking made or cancelled. The page asks the app (on this laptop, free)
 // whether it moved before re-listing through APIblaze, so an open, idle page spends nothing.
 let changes = 0;
@@ -66,9 +71,12 @@ function handle(req, res, body) {
     res.writeHead(200, { 'content-type': 'text/yaml' });
     return res.end(fs.readFileSync(path.join(__dirname, 'openapi.yaml')));
   }
-  const who = req.headers['x-abz-user-id'] || '';
   const tenant = req.headers['x-abz-tenant-id'] || '';
-  const reply = (status, data) => { remember({ method: req.method, path: url.pathname, who, tenant, status }); send(res, status, data); };
+  const who = idOf(tenant, req.headers['x-abz-user-id'] || '');
+  // Shown in the ticker and the terminal: the name the caller gave (APIblaze forwards it as
+  // x-end-user-id next to the stable id), never the opaque id.
+  const shown = req.headers['x-end-user-id'] || req.headers['x-abz-user-id'] || '';
+  const reply = (status, data) => { remember({ method: req.method, path: url.pathname, who: shown, tenant, status }); send(res, status, data); };
   const secret = process.env.BACKEND_SECRET || '';
   if (secret && req.headers['x-target-api-key'] !== secret) return reply(401, { error: 'missing or wrong backend secret (APIblaze adds it to every call it forwards)' });
   if (!who) return reply(401, { error: 'say who is calling (x-abz-user-id)' });

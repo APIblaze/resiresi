@@ -73,7 +73,38 @@
   .stack { display: grid; gap: 16px; }
   button.copy { font-size: 11.5px; padding: 1px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; vertical-align: 1px; }
   button.copy:hover { border-color: var(--muted); }
+
+  /* The measurement choice. One line, at the bottom, asked once. */
+  .consent { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center;
+    gap: 10px 16px; padding: 12px 16px; background: var(--card); border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+  .consent b { color: var(--ink); }
+  .consent .sp { flex: 1 1 auto; }
 </style>
+
+<!--
+  Google Analytics, opt-in.
+
+  This page runs on the visitor's OWN laptop (`npx apiblaze@latest demo`), which
+  makes measurement a different question than it is on apiblaze.com. So:
+    · every consent signal starts denied, right here, before anything else runs;
+    · nothing is fetched from Google until the visitor presses Allow — no tag,
+      no cookie, and no cookieless ping either;
+    · Do Not Track (or Global Privacy Control) is read as "no" without asking;
+    · `APIBLAZE_DEMO_ANALYTICS=0` when starting the demo removes the question
+      entirely (app.js stops advertising measurement in /api/config).
+
+  Only `demo_*` EVENTS are sent, never a page view: a page view from here would
+  land in the same property as apiblaze.com under the hostname "localhost" and
+  quietly ruin every page report there.
+-->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('consent', 'default', {
+    analytics_storage: 'denied', ad_storage: 'denied',
+    ad_user_data: 'denied', ad_personalization: 'denied',
+  });
+</script>
 </head>
 <body>
 <main>
@@ -140,6 +171,16 @@
     <p class="next">Each pizzeria only sees its own keys and people: switch pizzeria above. Developers can also sign in and get a key at the <a id="portal" target="_blank" rel="noopener">developer portal</a>.</p>
   </section>
 </main>
+
+<div class="consent" id="consent" hidden>
+  <span>May this demo send <b>anonymous usage events</b> — which buttons you press on this page — to
+    Google Analytics? It helps us see what people actually try. Your bookings, your messages to the
+    assistant and anything you type are never included, and nothing is sent unless you say yes.</span>
+  <span class="sp"></span>
+  <button class="act" id="consent-no">No thanks</button>
+  <button class="act primary" id="consent-yes">Allow</button>
+</div>
+
 <script src="/apiblaze-widgets.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
@@ -163,10 +204,49 @@ function reloadWith(next) {
   const p = new URLSearchParams({ pizzeria: next.pizzeria ?? state.pizzeria, as: next.as ?? $('#as').value, tab: next.tab ?? state.tab });
   location.assign(`${location.pathname}?${p}`);
 }
+// ── measurement (opt-in; see the comment in <head>) ──────────────────────────
+// `track()` is a no-op until the visitor allows it, so every call site below can
+// be written as if measurement were always on.
+const GA_ID = 'G-M0KZHLJ0ZD';
+const CONSENT_KEY = 'abz_demo_consent';
+const doNotTrack = navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true;
+const consentRead = () => { try { return localStorage.getItem(CONSENT_KEY); } catch { return null; } };
+const consentWrite = (v) => { try { localStorage.setItem(CONSENT_KEY, v); } catch { /* private mode: the choice holds for this page */ } };
+let gaOn = false;
+function startGa() {
+  if (gaOn) return;
+  gaOn = true;
+  gtag('js', new Date());
+  gtag('config', GA_ID, { send_page_view: false });
+  gtag('consent', 'update', { analytics_storage: 'granted' });
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+  document.head.append(s);
+}
+/**
+ * One demo event. `beacon` transport because half of these fire on a button that
+ * immediately navigates (the mode switch, the tabs) — a normal request would be
+ * cancelled by the page unload and the event lost.
+ */
+function track(name, params) {
+  if (!gaOn) return;
+  gtag('event', name, Object.assign(
+    { app: 'resiresi-demo', mode: state.direct ? 'direct' : 'protected', pizzeria: state.pizzeria, transport_type: 'beacon' },
+    params || {},
+  ));
+}
+
 let cfg = null;
 const ready = fetch('/api/config').then((r) => r.json()).then((c) => { cfg = c; return c; });
 const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch(() => ({ status: 0 }));
-const act = (op, extra) => post('/api/act', { op, pizzeria: state.pizzeria, as: me(), ...extra });
+// When the PAGE last changed a booking. The poller below uses it to tell its own
+// work apart from the assistant's (see demo_assistant_booking).
+let lastSelfAct = 0;
+const act = (op, extra) => {
+  if (op !== 'list') lastSelfAct = Date.now();
+  return post('/api/act', { op, pizzeria: state.pizzeria, as: me(), ...extra });
+};
 const me = () => $('#as').value;
 const pz = () => (cfg?.pizzerias || []).find((p) => p.id === state.pizzeria) || { label: 'Nino Pizza', admin: 'Ana' };
 const anaBooking = {};
@@ -178,6 +258,7 @@ document.querySelectorAll('button.copy').forEach((b) => b.onclick = async () => 
   try { await navigator.clipboard.writeText(text); }
   catch { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand('copy'); sel.removeAllRanges(); }
   b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200);
+  track('demo_copy', { what: (b.dataset.copy || '').replace('#', '') });
 });
 
 // ── mode (which site this is), pizzeria, tab ──
@@ -190,17 +271,17 @@ function setMode(direct) {
   $('#foot-protected').hidden = direct; $('#foot-direct').hidden = !direct;
 }
 function goTo(url) { if (url) location.assign(url + location.search); }
-$('#mode-protected').onclick = () => { if (state.direct) goTo(cfg.protectedUrl); };
-$('#mode-direct').onclick = () => { if (!state.direct) goTo(cfg.directUrl); };
+$('#mode-protected').onclick = () => { if (state.direct) { track('demo_mode', { to: 'protected' }); goTo(cfg.protectedUrl); } };
+$('#mode-direct').onclick = () => { if (!state.direct) { track('demo_mode', { to: 'direct' }); goTo(cfg.directUrl); } };
 function setTab(tab) {
   state.tab = tab;
   $('#app').hidden = tab !== 'app'; $('#admin').hidden = tab !== 'admin';
   $('#tab-app').setAttribute('aria-pressed', tab === 'app'); $('#tab-admin').setAttribute('aria-pressed', tab === 'admin');
 }
-$('#tab-app').onclick = () => { if (state.tab !== 'app') reloadWith({ tab: 'app' }); };
-$('#tab-admin').onclick = () => { if (state.tab !== 'admin') reloadWith({ tab: 'admin' }); };
-$('#go-admin').onclick = () => reloadWith({ tab: 'admin' });
-function setPizzeria(id) { if (id !== state.pizzeria) reloadWith({ pizzeria: id }); }
+$('#tab-app').onclick = () => { if (state.tab !== 'app') { track('demo_tab', { to: 'app' }); reloadWith({ tab: 'app' }); } };
+$('#tab-admin').onclick = () => { if (state.tab !== 'admin') { track('demo_tab', { to: 'admin' }); reloadWith({ tab: 'admin' }); } };
+$('#go-admin').onclick = () => { track('demo_tab', { to: 'admin', from: 'footer-link' }); reloadWith({ tab: 'admin' }); };
+function setPizzeria(id) { if (id !== state.pizzeria) { track('demo_pizzeria', { to: id }); reloadWith({ pizzeria: id }); } }
 
 async function render() {
   await ready;
@@ -235,7 +316,7 @@ async function refresh() {
     const t = document.createElement('span');
     t.textContent = `${b.guests || 2} people · ${dayLabel(b.date)} ${b.time} · table ${b.table} · #${b.id}`;
     const x = document.createElement('button'); x.className = 'act'; x.textContent = 'Cancel';
-    x.onclick = async () => { await act('cancel', { id: b.id }); refresh(); };
+    x.onclick = async () => { track('demo_cancel'); await act('cancel', { id: b.id }); refresh(); };
     li.append(t, x); ul.append(li);
   }
   $('#try-ben').hidden = !(me() === 'ben' && anaBooking[state.pizzeria]);
@@ -244,11 +325,15 @@ $('#book').onclick = async () => {
   const guests = Math.max(1, Number($('#guests').value) || 2);
   const date = $('#date').value || localDay();
   const time = $('#time').value || '19:30';
-  await act('book', { body: { guests, date, time } }); // the restaurant picks the table
+  const r = await act('book', { body: { guests, date, time } }); // the restaurant picks the table
+  track('demo_book', { guests, status: r.status || 0 });
   refresh();
 };
 $('#ben-cancel').onclick = async () => {
+  lastSelfAct = Date.now();
   const r = await post('/api/act', { op: 'cancel', pizzeria: state.pizzeria, as: 'ben', id: anaBooking[state.pizzeria] });
+  // The point of the whole demo: protected refuses Ben, direct lets him through.
+  track('demo_ownership_check', { blocked: r.status === 403, status: r.status || 0 });
   const d = document.createElement('div');
   if (r.status === 403) { d.className = 'out good'; d.textContent = "🛡 Blocked. Only Ana can cancel Ana's booking. APIblaze decided, not the app's code."; }
   else if (r.status === 204) { d.className = 'out bad'; d.textContent = "Cancelled. Straight to localhost, nothing stopped Ben."; anaBooking[state.pizzeria] = null; }
@@ -264,7 +349,13 @@ setInterval(async () => {
   if (state.tab !== 'app' || document.hidden) return;
   const c = await fetch('/api/changes').then((x) => x.json()).catch(() => null);
   if (!c) return;
-  if (lastChange !== null && c.n !== lastChange) refresh();
+  if (lastChange !== null && c.n !== lastChange) {
+    // A booking moved that this page did not move. On this demo the only other
+    // actor is the AI assistant, so that is what we count — with a 5s window so a
+    // click of our own that is still settling is never miscounted as the assistant.
+    if (Date.now() - lastSelfAct > 5000) track('demo_assistant_booking');
+    refresh();
+  }
   lastChange = c.n;
 }, 2000);
 
@@ -297,7 +388,25 @@ function mountAdmin() {
   if (cfg.widgets.groups) W.groups('#groups', { endpoint: '/api/apiblaze/groups?pizzeria=' + state.pizzeria, theme, title: `People and groups · ${pz().label}`, defaultOpenAdmins: true });
 }
 
+for (const id of ['#portal-top', '#portal']) {
+  $(id).addEventListener('click', () => track('demo_portal_open', { from: id.replace('#', '') }));
+}
+
 ready.then((c) => {
+  // Ask once, and only when there is something to ask about. A visitor who has
+  // already answered is never asked again; one who sends Do Not Track, or who
+  // started the demo with APIBLAZE_DEMO_ANALYTICS=0, is not asked at all.
+  if (c.analytics !== false && !doNotTrack) {
+    const choice = consentRead();
+    const begin = () => { startGa(); track('demo_open', { tab: state.tab }); };
+    if (choice === 'granted') begin();
+    else if (choice !== 'denied') {
+      $('#consent').hidden = false;
+      $('#consent-yes').onclick = () => { consentWrite('granted'); $('#consent').hidden = true; begin(); };
+      $('#consent-no').onclick = () => { consentWrite('denied'); $('#consent').hidden = true; };
+    }
+  }
+
   $('#api').textContent = c.apiUrl || 'not connected';
   setMode(!!c.direct);
   if (c.direct && !c.protectedUrl) { $('#mode-protected').disabled = true; $('#mode-protected').querySelector('small').textContent = 'starts once APIblaze is set up'; }

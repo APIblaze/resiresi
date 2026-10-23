@@ -125,6 +125,11 @@ function startApp(port = Number(env('APP_PORT', '3000')), { direct = false } = {
             logsCommand: `npx apiblaze@latest logs ${env('APIBLAZE_NAME')} --tenant ${env('APIBLAZE_TENANT')}`,
             pizzerias: Object.entries(PIZZERIAS).filter(([, pz]) => pz.tenant()).map(([id, pz]) => ({ id, label: pz.label, admin: pz.admin.label, mcpUrl: mcpFor(pz.tenant()), portalUrl: portalFor(pz.tenant()) })),
             widgets: { chat: Object.keys(w.chat || {}), keys: !!w.keys, groups: !!w.groups },
+            // Measurement off-switch for whoever runs the demo: start it with
+            // APIBLAZE_DEMO_ANALYTICS=0 and the page never asks and never loads
+            // anything from Google. Anything else leaves the opt-in question to
+            // the visitor (public/index.html).
+            analytics: env('APIBLAZE_DEMO_ANALYTICS', '1') !== '0',
           });
         }
         if (p === '/api/changes') {

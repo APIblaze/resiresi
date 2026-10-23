@@ -29,3 +29,17 @@ starts everything and opens the page. No login, no prompts, no dependencies.
 
 `npx apiblaze@latest demo` also adds `lib/apiblaze-server.js` and `public/apiblaze-widgets.js`, the same
 helpers you get from `npm i apiblaze`. Stop the demo with `npx apiblaze@latest demo stop`.
+
+## Measurement
+
+The page asks, once, whether it may send anonymous usage events to Google Analytics — which
+buttons you press here, so we can see what people actually try. It never includes your bookings,
+your messages to the assistant, or anything you type.
+
+Nothing is loaded from Google and nothing is sent until you press **Allow**. Your answer is kept
+in this browser. If your browser sends Do Not Track (or Global Privacy Control), the question is
+not asked and nothing is sent. To remove it entirely:
+
+```
+APIBLAZE_DEMO_ANALYTICS=0 npx apiblaze@latest demo
+```
